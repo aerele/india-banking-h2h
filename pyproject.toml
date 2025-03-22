@@ -1,0 +1,20 @@
+[project]
+name = "india_banking_h2h"
+authors = [
+    { name = "Aerele Technologies Private Limited", email = "hello@aerele.in"}
+]
+description = "India Banking H2H is a Frappe-based application designed for secure and automated Host-to-Host (H2H) bank integrations. It facilitates seamless payment processing by generating structured payment files and securely transferring them to a configured bank server via SFTP. The app ensures efficient and compliant financial transactions by integrating with ERP systems and banking networks."
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    # "frappe~=15.0.0" # Installed and managed by bench.
+]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+# These dependencies are only installed when developer mode is enabled
+[tool.bench.dev-dependencies]
+# package_name = "~=1.1.0"
