@@ -1,0 +1,126 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:payment_log_id",
+ "creation": "2025-03-22 17:46:37.906718",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_egmw",
+  "payment_log_id",
+  "status",
+  "column_break_iphq",
+  "payment_file",
+  "section_break_lkyi",
+  "payment_summary",
+  "responses_tab",
+  "section_break_wmaw",
+  "request",
+  "payment_response",
+  "amended_from",
+  "column_break_hgcg",
+  "status_response"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_egmw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Payment Log",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "payment_file",
+   "fieldtype": "Attach",
+   "label": "Payment File"
+  },
+  {
+   "fieldname": "payment_log_id",
+   "fieldtype": "Data",
+   "label": "Payment log ID",
+   "unique": 1
+  },
+  {
+   "fieldname": "payment_response",
+   "fieldtype": "Code",
+   "label": "Payment Response"
+  },
+  {
+   "fieldname": "status_response",
+   "fieldtype": "Code",
+   "label": "Status Response"
+  },
+  {
+   "fieldname": "column_break_iphq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_lkyi",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "payment_summary",
+   "fieldtype": "Table",
+   "label": "Payment Summary",
+   "options": "Payment Log Summary"
+  },
+  {
+   "fieldname": "responses_tab",
+   "fieldtype": "Tab Break",
+   "label": "Responses"
+  },
+  {
+   "fieldname": "section_break_wmaw",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_hgcg",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Pending Upload\nUploaded\nFailed\nInitiated\nProcessed"
+  },
+  {
+   "fieldname": "request",
+   "fieldtype": "Code",
+   "label": "Request"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-03-24 04:00:54.196402",
+ "modified_by": "Administrator",
+ "module": "India Banking H2H",
+ "name": "Payment Log",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
