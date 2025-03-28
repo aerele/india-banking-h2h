@@ -12,13 +12,14 @@
    "fieldname": "hosts",
    "fieldtype": "Table",
    "label": "Hosts",
-   "options": "Host Map"
+   "options": "Host Map",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-03-24 01:55:17.344220",
+ "modified": "2025-03-28 16:46:41.854479",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "Host Settings",
@@ -37,5 +38,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

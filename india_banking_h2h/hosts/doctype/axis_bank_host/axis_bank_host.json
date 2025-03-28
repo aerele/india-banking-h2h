@@ -26,10 +26,10 @@
   "password",
   "private_key",
   "locations_section",
-  "payment_path",
+  "payment_folder",
   "amended_from",
   "column_break_enfp",
-  "reversefeed_path"
+  "reversefeed_folder"
  ],
  "fields": [
   {
@@ -107,21 +107,11 @@
    "collapsible": 1,
    "fieldname": "locations_section",
    "fieldtype": "Section Break",
-   "label": "Payment & Reversefeed Path"
+   "label": "Payment & Reversefeed Locations"
   },
   {
    "fieldname": "column_break_enfp",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "reversefeed_path",
-   "fieldtype": "Data",
-   "label": "Reversefeed "
-  },
-  {
-   "fieldname": "payment_path",
-   "fieldtype": "Data",
-   "label": "Payment"
   },
   {
    "fieldname": "corporate_code",
@@ -157,12 +147,22 @@
    "fieldname": "company_code",
    "fieldtype": "Data",
    "label": "Company Code"
+  },
+  {
+   "fieldname": "payment_folder",
+   "fieldtype": "Data",
+   "label": "Payment Folder"
+  },
+  {
+   "fieldname": "reversefeed_folder",
+   "fieldtype": "Data",
+   "label": "Reversefeed Folder"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-03-25 19:00:27.607548",
+ "modified": "2025-03-28 16:46:10.534543",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "Axis Bank Host",
