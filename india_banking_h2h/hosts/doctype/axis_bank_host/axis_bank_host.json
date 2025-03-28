@@ -12,12 +12,13 @@
   "testing",
   "section_break_jujv",
   "account_number",
-  "userid",
   "corporate_code",
   "product_code",
+  "userid",
+  "user_department",
+  "company_code",
   "base_code",
   "cheque_number",
-  "user_department",
   "column_break_qwyl",
   "hostname",
   "port",
@@ -25,10 +26,10 @@
   "password",
   "private_key",
   "locations_section",
-  "payment_path",
+  "payment_folder",
   "amended_from",
   "column_break_enfp",
-  "reversefeed_path"
+  "reversefeed_folder"
  ],
  "fields": [
   {
@@ -106,21 +107,11 @@
    "collapsible": 1,
    "fieldname": "locations_section",
    "fieldtype": "Section Break",
-   "label": "Payment & Reversefeed Path"
+   "label": "Payment & Reversefeed Locations"
   },
   {
    "fieldname": "column_break_enfp",
    "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "reversefeed_path",
-   "fieldtype": "Data",
-   "label": "Reversefeed "
-  },
-  {
-   "fieldname": "payment_path",
-   "fieldtype": "Data",
-   "label": "Payment"
   },
   {
    "fieldname": "corporate_code",
@@ -151,12 +142,27 @@
    "fieldname": "user_department",
    "fieldtype": "Data",
    "label": "User Department"
+  },
+  {
+   "fieldname": "company_code",
+   "fieldtype": "Data",
+   "label": "Company Code"
+  },
+  {
+   "fieldname": "payment_folder",
+   "fieldtype": "Data",
+   "label": "Payment Folder"
+  },
+  {
+   "fieldname": "reversefeed_folder",
+   "fieldtype": "Data",
+   "label": "Reversefeed Folder"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-03-23 23:16:59.848892",
+ "modified": "2025-03-28 16:46:10.534543",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "Axis Bank Host",

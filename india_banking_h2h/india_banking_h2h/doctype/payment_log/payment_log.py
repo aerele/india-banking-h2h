@@ -1,12 +1,14 @@
 # Copyright (c) 2025, Aerele Technologies Private Limited and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe.model.document import Document
 
 
 class PaymentLog(Document):
-	def get_summary_details(self):
+	def get_summary_details(self, action=None):
 		"""
 		summarize the payment log.
 		Returns:
@@ -19,31 +21,12 @@ class PaymentLog(Document):
 			res_dict.message = "Payment is pending upload"
 			res_dict.summary_details = {}
 		elif self.status == "Uploaded":
-			res_dict.payment_status = "Uploaded"
-			res_dict.message = "Payment is uploaded"
+			res_dict.payment_status = (
+				"PROCESSED" if action == "get_payment_status" else "ACCEPTED"
+			)
+
 			res_dict.summary_details = {
-				sd.payment_id: frappe._dict({"status": sd.status} or {})
-				for sd in self.payment_summary
-			}
-		elif self.status == "Failed":
-			res_dict.payment_status = "Failed"
-			res_dict.message = "Payment failed"
-			res_dict.summary_details = {
-				sd.payment_id: frappe._dict({"status": sd.status} or {})
-				for sd in self.payment_summary
-			}
-		elif self.status == "Initiated":
-			res_dict.payment_status = "ACCEPTED"
-			res_dict.message = "Payment is accepted"
-			res_dict.summary_details = {
-				sd.payment_id: frappe._dict({"status": sd.status} or {})
-				for sd in self.payment_summary
-			}
-		elif self.status == "Processed":
-			res_dict.payment_status = "PROCESSED"
-			res_dict.message = "Payment is processed"
-			res_dict.summary_details = {
-				sd.payment_id: frappe._dict({"status": sd.status} or {})
+				sd.payment_id: json.loads(sd.status) or {}
 				for sd in self.payment_summary
 			}
 		else:

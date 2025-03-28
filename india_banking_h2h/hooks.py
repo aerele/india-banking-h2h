@@ -166,6 +166,12 @@ app_license = "mit"
 # 	],
 # }
 
+scheduler_events = {
+	"cron": {
+		"*/5 * * * *": "india_banking_h2h.tasks.fetch_payment_status",
+	},
+}
+
 # Testing
 # -------
 
@@ -241,4 +247,3 @@ app_license = "mit"
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-

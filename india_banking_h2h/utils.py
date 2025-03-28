@@ -19,10 +19,10 @@ def get_id(length: int = 10, text: str = "") -> str:
 	If the `length` parameter is a string, it will be used as the prefix text, and
 	the length of the generated ID will be equal to the length of this string.
 	Args:
-		length (int): The desired length of the generated ID. Defaults to 10.
-		text (str): An optional prefix text to include in the generated ID. Defaults to an empty string.
+	        length (int): The desired length of the generated ID. Defaults to 10.
+	        text (str): An optional prefix text to include in the generated ID. Defaults to an empty string.
 	Returns:
-		str: A randomly generated string ID of the specified length, optionally prefixed with the given text.
+	        str: A randomly generated string ID of the specified length, optionally prefixed with the given text.
 	"""
 
 	if isinstance(length, str):
@@ -45,11 +45,11 @@ def get_existing_doc(doctype: str, filters: dict = None) -> Document | None:
 	Retrieve an existing document object from the database based on the specified filters or document name.
 
 	Args:
-		doctype (str): The name of the DocType to search for.
-		filters (dict): A dictionary of filters to apply when searching for the document. Defaults to None.
+	        doctype (str): The name of the DocType to search for.
+	        filters (dict): A dictionary of filters to apply when searching for the document. Defaults to None.
 
 	Returns:
-		Document | None: The document object if found, otherwise None.
+	        Document | None: The document object if found, otherwise None.
 	"""
 	if isinstance(filters, str):
 		filters = {"name": filters}
