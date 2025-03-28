@@ -182,7 +182,7 @@ class AxisBankHost(BaseHost):
 			frappe.throw("No payment file created")
 
 	def get_status(self, status_code):
-		if status_code == "SUCCESS":
+		if status_c "SUCCESS":
 			return "Processed"
 		elif status_code == "REJECTED":
 			return "Rejected"
