@@ -8,6 +8,7 @@
  "field_order": [
   "source_file_name",
   "response",
+  "pretty_format_json",
   "error"
  ],
  "fields": [
@@ -26,12 +27,17 @@
    "fieldname": "error",
    "fieldtype": "Code",
    "label": "Error"
+  },
+  {
+   "fieldname": "pretty_format_json",
+   "fieldtype": "Button",
+   "label": "Pretty Format JSON"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-28 16:44:32.095086",
+ "modified": "2025-03-28 17:34:28.431737",
  "modified_by": "Administrator",
  "module": "India Banking H2H",
  "name": "Status Log",
