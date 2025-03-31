@@ -13,6 +13,7 @@
   "section_break_jujv",
   "account_number",
   "corporate_code",
+  "corp_email",
   "product_code",
   "userid",
   "user_department",
@@ -157,12 +158,18 @@
    "fieldname": "reversefeed_folder",
    "fieldtype": "Data",
    "label": "Reversefeed Folder"
+  },
+  {
+   "fieldname": "corp_email",
+   "fieldtype": "Data",
+   "label": "CORP Email",
+   "options": "Email"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-03-28 16:46:10.534543",
+ "modified": "2025-03-29 02:08:25.899367",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "Axis Bank Host",
