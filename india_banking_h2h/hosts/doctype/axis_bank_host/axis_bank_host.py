@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+import re
 
 import frappe
 from frappe.core.api.file import create_new_folder
@@ -101,6 +102,12 @@ class AxisBankHost(BaseHost):
 		request_data = {}
 		for summary in payment_details.summary:
 			summary = frappe._dict(summary)
+			bene_name = re.sub(
+				r"[^A-Za-z0-9 ]", "", summary.bene_name or summary.party_name
+			)
+			bene_code = re.sub(
+				r"[^A-Za-z0-9 ]", "", (summary.bene_code or summary.party)
+			)
 			payment_dic = {
 				"Identifier": "P",
 				"TXN_PAYMODE": self.get_mode_of_transfer(summary.mode_of_transfer),
@@ -110,8 +117,8 @@ class AxisBankHost(BaseHost):
 				"VALUE_DATE": getdate().strftime("%Y-%m-%d"),
 				"TXN_CRNCY": "INR",
 				"TXN_AMOUNT": summary.amount,
-				"BENE_NAME": summary.party_name,
-				"BENE_CODE": summary.party,
+				"BENE_NAME": bene_name[:70],
+				"BENE_CODE": bene_code[:30],
 				"BENE_ACC_NUM": summary.bank_account_no,
 				"BENE_AC_TYPE": "11",
 				"BENE_ADDR_1": "",
@@ -124,7 +131,7 @@ class AxisBankHost(BaseHost):
 				"BENE_BANK_NAME": summary.bank,
 				"BASE_CODE": self.base_code,
 				"CHEQUE_NUMBER": summary.cheque_number,
-				"CHEQUE_DATE": getdate().strftime("%Y-%m-%d"),
+				"CHEQUE_DATE": summary.cheque_date,
 				"PAYABLE_LOCATION": "",
 				"PRINT_LOCATION": "",
 				"BENE_EMAIL_ADDR1": summary.email,
@@ -139,10 +146,11 @@ class AxisBankHost(BaseHost):
 				"ENRICHMENT4": "",
 				"ENRICHMENT5": "",
 				"PayType": "VEND",
+				"CORP_EMAIL_ADDR": self.corp_email,
 				"TRANSMISSION_DATE": get_datetime().strftime("%Y-%m-%d %H-%M-%S"),
 				"ORIG_USERID": self.userid,
 				"USER_DEPARTMENT": self.user_department,
-				"BENE_LEI": summary.bene_lei,
+				"BENE_LEI": summary.bene_lei[:20],
 				"Add_Info1": "",
 				"Add_Info2": "",
 				"Add_Info3": "",
@@ -153,7 +161,7 @@ class AxisBankHost(BaseHost):
 
 			request_data[summary.name] = payment_dic
 			line = "^".join([cstr(value) or "" for value in payment_dic.values()])
-			file_content += line + "\r\n\r\n"
+			file_content += line + "\r\n"
 
 		if file_content:
 			filename = (
@@ -182,9 +190,9 @@ class AxisBankHost(BaseHost):
 			frappe.throw("No payment file created")
 
 	def get_status(self, status_code):
-		if status_code == "SUCCESS":
+		if status_code in ["SUCCESS", "PROCESSED"]:
 			return "Processed"
-		elif status_code == "REJECTED":
+		elif status_code in ["REJECTED", "RETURN"]:
 			return "Rejected"
 
 	def get_formated_summary_details(self, status_data):
@@ -196,6 +204,7 @@ class AxisBankHost(BaseHost):
 			data.status_code = status_data.status_code
 			data.status = self.get_status(status_data.status_code)
 			data.status_description = status_data.status_description
+			data.message = status_data.status_description
 			data.utr_number = (
 				status_data.transaction_utr_number or status_data.cheque_number
 			)
@@ -269,7 +278,7 @@ class AxisBankHost(BaseHost):
 			"BENE_CITY": optional,
 			"BENE_STATE": optional,
 			"BENE_PINCODE": optional,
-			"BENE_IFSC_CODE": default,
+			"BENE_IFSC_CODE": (0, "TXN_PAYMODE", "in", ["RT", "NE"], "STR"),
 			"BENE_BANK_NAME": (0, "TXN_PAYMODE", "in", ["RT", "NE"], "STR"),
 			"BASE_CODE": optional,
 			"CHEQUE_NUMBER": optional,
@@ -288,6 +297,7 @@ class AxisBankHost(BaseHost):
 			"ENRICHMENT4": optional,
 			"ENRICHMENT5": optional,
 			"PayType": optional,
+			"CORP_EMAIL_ADDR": (0, "TXN_PAYMODE", "in", ["RT", "NE"], "STR"),
 			"TRANSMISSION_DATE": optional,
 			"ORIG_USERID": optional,
 			"USER_DEPARTMENT": optional,
