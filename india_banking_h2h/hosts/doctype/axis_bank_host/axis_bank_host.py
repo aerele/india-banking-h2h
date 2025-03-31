@@ -94,7 +94,7 @@ class AxisBankHost(BaseHost):
 		elif mode_of_transfer == "IMPS":
 			return "PA"
 		else:
-			return "RT"
+			return "NE"
 
 	def make_payment_file(self, payment_log_id):
 		payment_details = self.doc
@@ -103,10 +103,10 @@ class AxisBankHost(BaseHost):
 		for summary in payment_details.summary:
 			summary = frappe._dict(summary)
 			bene_name = re.sub(
-				r"[^A-Za-z0-9 ]", "", summary.bene_name or summary.party_name
+				r"[^A-Za-z0-9 ]", "", (summary.bene_name or summary.party_name or "")
 			)
 			bene_code = re.sub(
-				r"[^A-Za-z0-9 ]", "", (summary.bene_code or summary.party)
+				r"[^A-Za-z0-9 ]", "", (summary.bene_code or summary.party or "")
 			)
 			payment_dic = {
 				"Identifier": "P",
@@ -150,7 +150,7 @@ class AxisBankHost(BaseHost):
 				"TRANSMISSION_DATE": get_datetime().strftime("%Y-%m-%d %H-%M-%S"),
 				"ORIG_USERID": self.userid,
 				"USER_DEPARTMENT": self.user_department,
-				"BENE_LEI": summary.bene_lei[:20],
+				"BENE_LEI": (summary.bene_lei or "")[:20],
 				"Add_Info1": "",
 				"Add_Info2": "",
 				"Add_Info3": "",
