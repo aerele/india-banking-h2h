@@ -9,12 +9,12 @@ from india_banking_h2h.defaults import (
 
 def after_install():
 	click.secho("* Updating India Banking Host to Host Customisations")
-	create_default_bank()
-	create_host_settings()
 	create_bank_doctype()
+	create_default_banks()
+	create_host_settings()
 
 
-def create_default_bank():
+def create_default_banks():
 	click.echo(" -> Creating Default Banks")
 	for bank in STD_BANK_LIST:
 		if not frappe.db.exists("Bank", bank):
