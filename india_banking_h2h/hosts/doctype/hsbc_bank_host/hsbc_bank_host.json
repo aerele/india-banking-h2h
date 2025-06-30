@@ -1,0 +1,226 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:account_number",
+ "creation": "2025-06-20 10:47:37.789088",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_egib",
+  "active",
+  "column_break_mwck",
+  "testing",
+  "section_break_jujv",
+  "account_number",
+  "ifsc_code",
+  "pc_id",
+  "currency",
+  "column_break_qwyl",
+  "sftp_private_key",
+  "pgp_key_details_section",
+  "pgp_public_key",
+  "client_finger_print",
+  "pgp_private_key",
+  "pgp_private_key_password",
+  "column_break_ejfc",
+  "hsbc_pgp_public_key",
+  "hsbc_finger_print",
+  "hsbc_details_section",
+  "hostname",
+  "username",
+  "payment_folder",
+  "column_break_enfp",
+  "port",
+  "password",
+  "reversefeed_folder",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_egib",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "column_break_mwck",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "testing",
+   "fieldtype": "Check",
+   "label": "Testing"
+  },
+  {
+   "fieldname": "section_break_jujv",
+   "fieldtype": "Section Break",
+   "label": "Client Details"
+  },
+  {
+   "fieldname": "account_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Account Number",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_qwyl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username"
+  },
+  {
+   "description": "Eg: example.in or 22.44.55.66",
+   "fieldname": "hostname",
+   "fieldtype": "Data",
+   "label": "Hostname"
+  },
+  {
+   "fieldname": "payment_folder",
+   "fieldtype": "Data",
+   "label": "Payment Folder"
+  },
+  {
+   "fieldname": "column_break_enfp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "password",
+   "fieldtype": "Password",
+   "label": "Password"
+  },
+  {
+   "default": "10022",
+   "description": "Eg: 10022",
+   "fieldname": "port",
+   "fieldtype": "Data",
+   "label": "Port"
+  },
+  {
+   "description": "Eg: /Inbox",
+   "fieldname": "reversefeed_folder",
+   "fieldtype": "Data",
+   "label": "Reversefeed Folder"
+  },
+  {
+   "fieldname": "pc_id",
+   "fieldtype": "Data",
+   "label": "PC ID"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "hsbc_details_section",
+   "fieldtype": "Section Break",
+   "label": "HSBC Details"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "HSBC Bank Host",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "HSBCINBB",
+   "fieldname": "ifsc_code",
+   "fieldtype": "Data",
+   "label": "IFSC Code "
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "sftp_private_key",
+   "fieldtype": "Attach",
+   "label": "Private Key (SFTP)"
+  },
+  {
+   "fieldname": "pgp_public_key",
+   "fieldtype": "Attach",
+   "label": "Public Key(PGP Public Key)"
+  },
+  {
+   "fieldname": "pgp_private_key",
+   "fieldtype": "Attach",
+   "label": "Sign in Key(PGP Private Key)"
+  },
+  {
+   "depends_on": "eval: !! doc.pgp_private_key",
+   "description": "Required if the PGP private key was generated with a password.",
+   "fieldname": "pgp_private_key_password",
+   "fieldtype": "Password",
+   "label": "Sign in key password"
+  },
+  {
+   "fieldname": "hsbc_pgp_public_key",
+   "fieldtype": "Attach",
+   "label": "Encryption Key(HSBC PGP Public Key)"
+  },
+  {
+   "fieldname": "pgp_key_details_section",
+   "fieldtype": "Section Break",
+   "label": "PGP Key Details"
+  },
+  {
+   "fieldname": "column_break_ejfc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: !!doc.hsbc_pgp_public_key",
+   "fieldname": "hsbc_finger_print",
+   "fieldtype": "Data",
+   "label": "Finger Print(HSBC PGP Public Key)",
+   "mandatory_depends_on": "eval: !!doc.hsbc_pgp_public_key"
+  },
+  {
+   "depends_on": "eval: !!doc.pgp_public_key",
+   "fieldname": "client_finger_print",
+   "fieldtype": "Data",
+   "label": "Finger Print(PGP Public Key)",
+   "mandatory_depends_on": "eval: !!doc.pgp_public_key"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-06-30 11:21:23.273227",
+ "modified_by": "Administrator",
+ "module": "Hosts",
+ "name": "HSBC Bank Host",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
