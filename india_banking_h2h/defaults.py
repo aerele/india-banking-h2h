@@ -8,8 +8,11 @@ STD_BANK_LIST = [
 
 DEFAULT_HOSTS = [
 	"Axis Bank Host",
+	"HSBC Bank Host",
 ]
 
 BANKS_HOST_MAP = {
 	"Axis Bank": "Axis Bank Host",
+	"ICICI Bank": "ICICI Bank Host",
+	"HSBC Bank": "HSBC Bank Host",
 }

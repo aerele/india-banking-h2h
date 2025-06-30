@@ -33,3 +33,14 @@ class PaymentLog(Document):
 			res_dict.message = "Unknown status"
 
 		return res_dict
+
+	@frappe.whitelist()
+	def decrypt_file(self):
+		return frappe.get_doc(self.host, self.host_name).decrypt_file(
+			encrypted_file=self.encrypted_file,
+		)
+
+	@frappe.whitelist()
+	def get_encrypt_payment_file(self):
+		host = frappe.get_doc(self.host, self.host_name)
+		return host.get_encrypt_payment_file(self.name)

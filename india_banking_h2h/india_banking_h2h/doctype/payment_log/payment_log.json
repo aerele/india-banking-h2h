@@ -8,11 +8,12 @@
  "field_order": [
   "section_break_egmw",
   "payment_log_id",
-  "status",
-  "column_break_iphq",
   "host",
   "host_name",
+  "column_break_iphq",
+  "status",
   "payment_file",
+  "encrypted_file",
   "section_break_lkyi",
   "payment_summary",
   "section_break_request",
@@ -94,13 +95,18 @@
    "fieldname": "pretty_format_json",
    "fieldtype": "Button",
    "label": "Pretty Format JSON"
+  },
+  {
+   "fieldname": "encrypted_file",
+   "fieldtype": "Attach",
+   "label": "Encrypted File"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-03-28 16:45:45.775483",
+ "modified": "2025-06-23 15:05:44.349340",
  "modified_by": "Administrator",
  "module": "India Banking H2H",
  "name": "Payment Log",

@@ -68,29 +68,29 @@ class BaseHost(Document):
 		frappe.db.set_value(
 			"Payment Log",
 			log_id,
-			"payment_file",
-			request.get("file_url", ""),
-		)
-		frappe.db.set_value(
-			"Payment Log",
-			log_id,
-			"request",
-			json.dumps(request.get("request_data", "")),
+			{
+				"payment_file": request.get("file_url", ""),
+				"request": json.dumps(request.get("request_data", "")),
+			},
 		)
 		frappe.db.commit()
+		if self.encrypt_payment_file:
+			return self.get_encrypt_payment_file(log_id)
+
 		return frappe.db.get_value("Payment Log", log_id, "payment_file")
 
 	def process_payment(self, log_id):
-		"""
-		Process the payment and return the response.
-		Args:
-		        log_id (str): The ID of the payment log.
-		Returns:
-		        dict: A dictionary containing the formatted response of the payment processing.
-		"""
 		payment_file_url = frappe.db.get_value("Payment Log", log_id, "payment_file")
+
 		if not payment_file_url:
 			payment_file_url = self.generate_new_payment_file(log_id)
+
+		if payment_file_url and self.encrypt_payment_file:
+			payment_file_url = frappe.db.get_value(
+				"Payment Log", log_id, "encrypted_file"
+			)
+			if not payment_file_url:
+				payment_file_url = self.get_encrypt_payment_file(log_id)
 
 		if not payment_file_url:
 			frappe.throw("Payment Failed: Payment file not found")
