@@ -9,7 +9,8 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # "frappe~=15.0.0" # Installed and managed by bench.
-    "paramiko",
+    "paramiko~=3.5.1",
+    "python-gnupg~=0.5.4",
 ]
 
 [build-system]
