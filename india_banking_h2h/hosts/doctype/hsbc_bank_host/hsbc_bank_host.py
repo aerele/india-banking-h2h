@@ -216,6 +216,16 @@ class HSBCBankHost(BaseHost):
 		else:
 			frappe.throw("No payment file created")
 
+	def get_mode_of_transfer(self):
+		mode_of_transfer = "URGP"
+		payment_details = frappe._dict(self.doc)
+		for summary in payment_details.summary:
+			if summary.get("mode_of_transfer") != "RTGS":
+				mode_of_transfer = "URNS"
+				break
+
+		return mode_of_transfer
+
 	def build_xml_dict(self):
 		payment_details = frappe._dict(self.doc)
 		unique_id = get_id(payment_details.name)
@@ -243,13 +253,7 @@ class HSBCBankHost(BaseHost):
 					"PmtInf": {
 						"PmtInfId": unique_id,
 						"PmtMtd": "TRF",
-						"PmtTpInf": {
-							"SvcLvl": {
-								"Cd": "URNS"
-								if payment_details.mode_of_transfer == "NEFT"
-								else "URGP"
-							}
-						},
+						"PmtTpInf": {"SvcLvl": {"Cd": self.get_mode_of_transfer()}},
 						"ReqdExctnDt": get_datetime().strftime("%Y-%m-%d"),
 						"Dbtr": {
 							"Nm": payment_details.company_bank_account
