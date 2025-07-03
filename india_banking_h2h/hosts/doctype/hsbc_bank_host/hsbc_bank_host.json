@@ -12,9 +12,8 @@
   "testing",
   "section_break_jujv",
   "account_number",
-  "ifsc_code",
   "pc_id",
-  "currency",
+  "ifsc_code",
   "column_break_qwyl",
   "sftp_private_key",
   "pgp_key_details_section",
@@ -114,7 +113,8 @@
   {
    "fieldname": "pc_id",
    "fieldtype": "Data",
-   "label": "PC ID"
+   "label": "PC ID",
+   "reqd": 1
   },
   {
    "collapsible": 1,
@@ -131,18 +131,6 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "default": "HSBCINBB",
-   "fieldname": "ifsc_code",
-   "fieldtype": "Data",
-   "label": "IFSC Code "
-  },
-  {
-   "fieldname": "currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency"
   },
   {
    "fieldname": "sftp_private_key",
@@ -193,12 +181,19 @@
    "fieldtype": "Data",
    "label": "Finger Print(PGP Public Key)",
    "mandatory_depends_on": "eval: !!doc.pgp_public_key"
+  },
+  {
+   "default": "HSBCINBB",
+   "description": "eg: HSBCINBB",
+   "fieldname": "ifsc_code",
+   "fieldtype": "Data",
+   "label": "IFSC Code"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-30 11:21:23.273227",
+ "modified": "2025-07-01 16:55:23.168870",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "HSBC Bank Host",

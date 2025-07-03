@@ -25,6 +25,7 @@ class HSBCBankHost(BaseHost):
 		super().__init__(*args, **kwargs)
 		self.doc = frappe._dict(kwargs.get("doc", {}))
 		self.encrypt_payment_file = True
+		self.summary_details = {}
 
 	def is_h2h_enabled(self):
 		if not self.active:
@@ -48,7 +49,6 @@ class HSBCBankHost(BaseHost):
 
 		log_id = self.create_payment_log(payment_details, commit=True)
 		if log_id:
-			frappe.get_doc("Payment Log", log_id)
 			return self.process_payment(log_id=log_id)
 		else:
 			frappe.throw("Failed to create payment log")
@@ -81,68 +81,66 @@ class HSBCBankHost(BaseHost):
 			)
 		payment_log_doc.insert()
 
-		request = self.make_payment_file(payment_log_doc.name)
+		self.make_payment_file(payment_log_doc.name)
 
-		frappe.db.set_value(
-			"Payment Log",
-			payment_log_doc.name,
-			{
-				"payment_file": request.get("file_url", ""),
-				"request": request.get("request_data", ""),
-			},
-		)
 		if commit:
 			frappe.db.commit()
 
 		return payment_log_doc.name
 
+	def process_payment(self, log_id):
+		self.make_payment_file(log_id)
+		if self.encrypt_payment_file:
+			self.encrypt_payment_files(log_id)
+
+		return self.upload_payment_files_to_server(log_id)
+
 	def get_status(self, status):
-		if status in ["ACWC"]:
+		if status in ["ACCP"]:
 			return "Processed"
 		return ""
 
-	def get_formated_response(self, data):
+	def format_response(self, status_log_id):
+		data = frappe.db.get_value("Status Log", status_log_id, "decrypted_data")
 		if not data:
 			return ""
 
+		ns = {"ns": "urn:iso:std:iso:20022:tech:xsd:pain.002.001.03"}
+
 		root = ET.fromstring(data)
+		formated_response = {}
+		for tx in root.findall(".//ns:TxInfAndSts", ns):
+			tx_id = tx.find("ns:StsId", ns)
+			tx_status = tx.find("ns:TxSts", ns)
+			instr_id = tx.find("ns:OrgnlInstrId", ns)
+			end_to_end_id = tx.find("ns:OrgnlEndToEndId", ns)
+			amount = tx.find(".//ns:Amt/ns:InstdAmt", ns)
+			currency = amount.attrib.get("Ccy") if amount is not None else "N/A"
 
-		status_data = {}
-		for tx_info in root.findall(".//TxInfAndSts") or []:
-			instr_id = tx_info.findtext("OrgnlInstrId")
-			end_to_end_id = tx_info.findtext("OrgnlEndToEndId")
-			tx_status = tx_info.findtext("TxSts")
+			tx_id = tx_id.text if tx_id is not None else ""
+			tx_status = tx_status.text if tx_status is not None else ""
+			instr_id = instr_id.text if instr_id is not None else ""
+			end_to_end_id = end_to_end_id.text if end_to_end_id is not None else ""
+			amount = amount.text if amount is not None else ""
 
-			instd_amt_el = tx_info.find(".//InstdAmt")
-			instd_amt = instd_amt_el.text if instd_amt_el is not None else None
-			currency = (
-				instd_amt_el.attrib.get("Ccy") if instd_amt_el is not None else None
-			)
-
-			collection_date = tx_info.findtext(".//ReqdColltnDt")
-			debtor_name = tx_info.findtext(".//Dbtr/Nm")
-			debtor_id = tx_info.findtext(".//Dbtr/Id/OrgId/Othr/Id")
-			creditor_name = tx_info.findtext(".//Cdtr/Nm")
-
-			status_data[instr_id] = {
+			formated_response[instr_id] = {
 				"end_to_end_id": end_to_end_id,
 				"status": self.get_status(tx_status),
 				"status_code": tx_status,
-				"amount": instd_amt,
+				"amount": amount,
 				"currency": currency,
-				"collection_date": collection_date,
-				"debtor_name": debtor_name,
-				"debtor_id": debtor_id,
-				"creditor_name": creditor_name,
+				"transaction_id": tx_id,
 				"utr_number": "",
 			}
 
-		formated_response = {
-			"invalid_response": [],
-			"summary_data": status_data,
-		}
+		if formated_response:
+			frappe.db.set_value(
+				"Status Log", status_log_id, "response", json.dumps(formated_response)
+			)
 
-		return formated_response
+		status_log = frappe.get_doc("Status Log", status_log_id)
+		status_log.reload()
+		status_log.update_payment_status()
 
 	def build_xml_from_dict(self, parent, data):
 		if isinstance(data, dict):
@@ -171,64 +169,140 @@ class HSBCBankHost(BaseHost):
 			parent.text = str(data)
 
 	def make_payment_file(self, payment_log_id):
-		def build_element(tag, value):
-			attrs = {}
-			text = None
-			if isinstance(value, dict):
-				for k in list(value.keys()):
-					if k.startswith("@"):
-						attrs[k[1:]] = value.pop(k)
-					elif k == "#text":
-						text = value.pop(k)
-			elem = Element(tag, attrs)
-			if text:
-				elem.text = text
+		payment_log_doc = frappe.get_doc("Payment Log", payment_log_id)
+		self.update_summary_details()
 
-			self.build_xml_from_dict(elem, value)
-			return elem
+		requested_data = {}
+		file_urls = {}
 
-		xml_dict = self.build_xml_dict()
-		root_tag = list(xml_dict.keys())[0]
-		root_value = xml_dict[root_tag]
-		root = build_element(root_tag, root_value)
+		for mot in self.to_be_generate_mot:
+			if payment_log_doc.get(mot + "_payment_file"):
+				continue
 
-		xml_str = tostring(root, encoding="utf-8")
-		file_content = parseString(xml_str).toprettyxml(indent="    ")
+			def build_element(tag, value):
+				attrs = {}
+				text = None
+				if isinstance(value, dict):
+					for k in list(value.keys()):
+						if k.startswith("@"):
+							attrs[k[1:]] = value.pop(k)
+						elif k == "#text":
+							text = value.pop(k)
+				elem = Element(tag, attrs)
+				if text:
+					elem.text = text
 
-		if file_content:
-			filename = (
-				"HSBC_" + getdate().strftime("%d%m%y") + "_" + payment_log_id + ".xml"
-			)
-			create_new_folder("Payment Log", "Home")
-			file = frappe.new_doc("File")
-			file.file_name = filename
-			file.content = file_content
-			file.folder = "Home/Payment Log"
-			file.attached_to_doctype = "Payment Log"
-			file.attached_to_name = payment_log_id
-			file.attached_to_field = "payment_file"
-			file.insert()
+				self.build_xml_from_dict(elem, value)
+				return elem
 
-			return {
-				"file_url": file.file_url,
-				"request_data": file_content,
-			}
+			xml_dict = self.build_xml_dict(mot)
+			root_tag = list(xml_dict.keys())[0]
+			root_value = xml_dict[root_tag]
+			root = build_element(root_tag, root_value)
+
+			xml_str = tostring(root, encoding="utf-8")
+			file_content = parseString(xml_str).toprettyxml(indent="    ")
+
+			if file_content:
+				filename = (
+					"HSBC_"
+					+ getdate().strftime("%d%m%y")
+					+ "_"
+					+ payment_log_id
+					+ "_"
+					+ mot
+					+ ".xml"
+				)
+				create_new_folder("Payment Log", "Home")
+				file = frappe.new_doc("File")
+				file.file_name = filename
+				file.content = file_content
+				file.folder = "Home/Payment Log"
+				file.attached_to_doctype = "Payment Log"
+				file.attached_to_name = payment_log_id
+				file.attached_to_field = f"{mot}_payment_file"
+				file.insert()
+
+				frappe.db.set_value(
+					"Payment Log", payment_log_id, f"{mot}_payment_file", file.file_url
+				)
+
+				requested_data[mot] = file_content
+				file_urls[f"{mot}_payment_file"] = file.file_url
+
+		values = file_urls
+		values["request"] = json.dumps(requested_data)
+		frappe.db.set_value("Payment Log", payment_log_id, values)
+
+	def get_mode_of_transfer(self, mot):
+		if mot in ["rtgs", "a2a"]:
+			return "URGP"
+		elif mot == "imps":
+			return "IMPS"
 		else:
-			frappe.throw("No payment file created")
+			return "URNS"
 
-	def get_mode_of_transfer(self):
-		mode_of_transfer = "URGP"
+	def update_summary_details(self):
+		file_mot = []
 		payment_details = frappe._dict(self.doc)
+
 		for summary in payment_details.summary:
-			if summary.get("mode_of_transfer") != "RTGS":
-				mode_of_transfer = "URNS"
-				break
+			summary = frappe._dict(summary)
+			mot = ""
+			if "rtgs" in summary.mode_of_transfer.lower():
+				mot = "rtgs"
+				if self.summary_details.get(mot):
+					self.summary_details[mot]["summary"].append(summary)
+					self.summary_details[mot]["total"] += summary.amount
+				else:
+					self.summary_details[mot] = {}
+					self.summary_details[mot]["summary"] = [summary]
+					self.summary_details[mot]["total"] = summary.amount
+			elif "a2a" in summary.mode_of_transfer.lower():
+				mot = "a2a"
+				if self.summary_details.get(mot):
+					self.summary_details[mot]["summary"].append(summary)
+					self.summary_details[mot]["total"] += summary.amount
+				else:
+					self.summary_details[mot] = {}
+					self.summary_details[mot]["summary"] = [summary]
+					self.summary_details[mot]["total"] = summary.amount
+			elif "imps" in summary.mode_of_transfer.lower():
+				mot = "imps"
+				if self.summary_details.get(mot):
+					self.summary_details[mot]["summary"].append(summary)
+					self.summary_details[mot]["total"] += summary.amount
+				else:
+					self.summary_details[mot] = {}
+					self.summary_details[mot]["summary"] = [summary]
+					self.summary_details[mot]["total"] = summary.amount
+			else:
+				mot = "neft"
+				if self.summary_details.get(mot):
+					self.summary_details[mot]["summary"].append(summary)
+					self.summary_details[mot]["total"] += summary.amount
+				else:
+					self.summary_details[mot] = {}
+					self.summary_details[mot]["summary"] = [summary]
+					self.summary_details[mot]["total"] = summary.amount
 
-		return mode_of_transfer
+			file_mot.append(mot)
 
-	def build_xml_dict(self):
+		self.to_be_generate_mot = list(set(file_mot))
+
+	def build_xml_dict(self, mot):
 		payment_details = frappe._dict(self.doc)
+
 		unique_id = get_id(payment_details.name)
+
+		payment_dict = frappe._dict(
+			{
+				"unique_id": f"{unique_id}_{mot}",
+				"company_name": payment_details.company,
+				"summary_details": self.summary_details[mot]["summary"],
+				"total": self.summary_details[mot]["total"],
+			}
+		)
 
 		xml_dict = {
 			"Document": {
@@ -236,10 +310,10 @@ class HSBCBankHost(BaseHost):
 				"@xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance",
 				"CstmrCdtTrfInitn": {
 					"GrpHdr": {
-						"MsgId": unique_id,
+						"MsgId": payment_dict.unique_id,
 						"CreDtTm": get_datetime().strftime("%Y-%m-%dT%H:%M:%S"),
-						"NbOfTxs": cstr(len(payment_details.summary)),
-						"CtrlSum": cstr(payment_details.total),
+						"NbOfTxs": cstr(len(payment_dict.summary_details)),
+						"CtrlSum": cstr(payment_dict.total),
 						"InitgPty": {
 							"Id": {
 								"OrgId": {
@@ -251,28 +325,27 @@ class HSBCBankHost(BaseHost):
 						},
 					},
 					"PmtInf": {
-						"PmtInfId": unique_id,
+						"PmtInfId": payment_dict.unique_id,
 						"PmtMtd": "TRF",
-						"PmtTpInf": {"SvcLvl": {"Cd": self.get_mode_of_transfer()}},
+						"PmtTpInf": {"SvcLvl": {"Cd": self.get_mode_of_transfer(mot)}},
 						"ReqdExctnDt": get_datetime().strftime("%Y-%m-%d"),
 						"Dbtr": {
-							"Nm": payment_details.company_bank_account
-							or payment_details.company,
+							"Nm": payment_dict.company_name,
 							"PstlAdr": {
 								"StrtNm": "",
 								"PstCd": "",
-								"TwnNm": "",
+								"TwnNm": "IND",
 								"CtrySubDvsn": "",
-								"Ctry": "",
+								"Ctry": "IN",
 							},
 						},
 						"DbtrAcct": {
 							"Id": {
 								"Othr": {
-									"Id": self.name,
+									"Id": self.account_number,
 								}
 							},
-							"Ccy": self.currency,
+							"Ccy": "INR",
 						},
 						"DbtrAgt": {
 							"FinInstnId": {
@@ -282,7 +355,7 @@ class HSBCBankHost(BaseHost):
 								},
 							}
 						},
-						**self.get_transactions(),
+						**self.get_transactions(payment_dict.summary_details),
 					},
 				},
 			}
@@ -290,11 +363,9 @@ class HSBCBankHost(BaseHost):
 
 		return xml_dict
 
-	def get_transactions(self):
+	def get_transactions(self, summary_details):
 		transactions = {}
-		payment_details = frappe._dict(self.doc)
-		for summary in payment_details.summary:
-			summary = frappe._dict(summary)
+		for summary in summary_details:
 			tx_dict = {
 				f"CdtTrfTxInf-{summary.name}": {
 					"PmtId": {
@@ -315,9 +386,7 @@ class HSBCBankHost(BaseHost):
 					},
 					"Cdtr": {
 						"Nm": summary.party or summary.party_name,
-						"PstlAdr": {
-							"Ctry": "IN",
-						},
+						"PstlAdr": {"TwnNm": "IND", "Ctry": "IN"},
 					},
 					"CdtrAcct": {
 						"Id": {
@@ -341,9 +410,7 @@ class HSBCBankHost(BaseHost):
 						"Strd": {
 							"RfrdDocInf": {
 								"Nb": summary.payment_entry or summary.journal_entry,
-								"RltdDt": getdate(
-									payment_details.posting_date
-								).strftime("%Y-%m-%d"),
+								"RltdDt": getdate().strftime("%Y-%m-%d"),
 							},
 							"RfrdDocAmt": {
 								"DuePyblAmt": {
@@ -366,8 +433,34 @@ class HSBCBankHost(BaseHost):
 
 		return transactions
 
-	def upload_payment_files_to_server(self, filename, payment_file_path, log_id):
+	def upload_payment_files_to_server(self, log_id):
 		payment_log_doc = frappe.get_doc("Payment Log", log_id)
+
+		not_uploaded_encrypted_payment_files = []
+
+		if payment_log_doc.a2a_encrypted_payment_file:
+			if not payment_log_doc.uploaded_a2a:
+				not_uploaded_encrypted_payment_files.append(
+					("a2a", payment_log_doc.a2a_encrypted_payment_file)
+				)
+
+		if payment_log_doc.neft_encrypted_payment_file:
+			if not payment_log_doc.uploaded_neft:
+				not_uploaded_encrypted_payment_files.append(
+					("neft", payment_log_doc.neft_encrypted_payment_file)
+				)
+
+		if payment_log_doc.rtgs_encrypted_payment_file:
+			if not payment_log_doc.uploaded_rtgs:
+				not_uploaded_encrypted_payment_files.append(
+					("rtgs", payment_log_doc.rtgs_encrypted_payment_file)
+				)
+
+		if payment_log_doc.imps_encrypted_payment_file:
+			if not payment_log_doc.uploaded_imps:
+				not_uploaded_encrypted_payment_files.append(
+					("imps", payment_log_doc.imps_encrypted_payment_file)
+				)
 
 		transport = None
 		sftp = None
@@ -381,25 +474,29 @@ class HSBCBankHost(BaseHost):
 
 			sftp = paramiko.SFTPClient.from_transport(transport)
 			sftp.chdir(self.payment_folder)
+			for mot, encrypted_payment_file in not_uploaded_encrypted_payment_files:
+				payment_file_path = get_file_path(encrypted_payment_file)
+				payment_file = Path(payment_file_path)
 
-			payment_file = Path(payment_file_path)
+				try:
+					sftp.stat(payment_file.name)
+				except FileNotFoundError:
+					pass
 
-			try:
-				sftp.stat(payment_file.name)
-			except FileNotFoundError:
-				pass
+				sftp.put(payment_file, payment_file.name, confirm=False)
+				frappe.db.set_value(
+					"Payment Log",
+					log_id,
+					"uploaded_" + mot,
+					1,
+				)
 			else:
-				payment_log_doc.reload()
-				return payment_log_doc.get_summary_details()
-
-			sftp.put(payment_file, payment_file.name, confirm=False)
-
-			frappe.db.set_value(
-				"Payment Log",
-				log_id,
-				"status",
-				"Uploaded",
-			)
+				frappe.db.set_value(
+					"Payment Log",
+					log_id,
+					"status",
+					"Uploaded",
+				)
 		except Exception:
 			frappe.log_error(
 				"Payment File Upload Failed",
@@ -428,8 +525,6 @@ class HSBCBankHost(BaseHost):
 		transport = None
 		sftp = None
 		try:
-			gpg = self.init_gpg()
-
 			key = paramiko.RSAKey.from_private_key_file(
 				get_file_path(self.sftp_private_key)
 			)
@@ -446,38 +541,45 @@ class HSBCBankHost(BaseHost):
 				if (item.st_mode & 0o100000)
 			]
 			for file_name in reversefeed_files:
-				file_name = file_name[-50:]
 				if frappe.db.exists("Status Log", {"source_file_name": file_name}):
+					self.decrypt_file(file_name)
+					self.format_response(file_name)
 					continue
 
-				status_file_path = os.path.join(self.reversefeed_folder, file_name)
+				create_new_folder("Status Log", "Home")
 
-				decrypted_data = None
-				with open(status_file_path, "rb") as f:
-					decrypted = gpg.decrypt_file(
-						f,
-						always_trust=True,
-						passphrase=self.get_password("pgp_private_key_password")
-						if self.pgp_private_key_password
-						else None,
-					)
-					if not decrypted.ok:
-						frappe.throw(
-							"Decryption failed:",
-							frappe.get_traceback(with_context=True),
-						)
+				r_file = frappe.new_doc("File")
+				r_file.file_name = file_name
+				r_file.content = file_name.encode()
+				r_file.folder = "Home/Status Log"
+				r_file.attached_to_doctype = "Status Log"
+				r_file.attached_to_name = file_name
+				r_file.file_type = "TXT"
+				r_file.is_private = 1
+				r_file.attached_to_field = "status_file"
+				r_file.insert()
 
-					if decrypted.valid:
-						decrypted_data = decrypted.data
+				status_log = frappe.new_doc("Status Log")
+				status_log.source_file_name = file_name
+				status_log.status_file = r_file.file_url
+				status_log.host = self.doctype
+				status_log.host_name = self.name
+				status_log.save()
+
+				source_status_file_path = file_name
+				target_status_file_path = get_file_path(r_file.file_url)
+
+				if source_status_file_path and target_status_file_path:
+					try:
+						sftp.stat(source_status_file_path)
+					except Exception:
+						frappe.log_error("Payment status file not found!")
 					else:
-						frappe.log_error(
-							"Decrypted file is not valid", decrypted.stderr
-						)
+						sftp.get(source_status_file_path, target_status_file_path)
+						frappe.db.commit()
 
-					if decrypted_data:
-						file_dict.setdefault(
-							file_name, self.get_formated_response(decrypted_data)
-						)
+				self.decrypt_file(status_log.name, target_status_file_path)
+				self.format_response(status_log.name)
 
 		except FileNotFoundError:
 			frappe.log_error(
@@ -515,72 +617,99 @@ class HSBCBankHost(BaseHost):
 
 		return gpg
 
-	def get_encrypt_payment_file(self, log_id):
-		if encrypted_file_url := frappe.get_value(
-			"Payment Log", log_id, "encrypted_file"
-		):
-			return encrypted_file_url
-
+	def encrypt_payment_files(self, log_id):
 		payment_log_doc = frappe.get_doc("Payment Log", log_id)
+		payment_files = (
+			(
+				"a2a",
+				payment_log_doc.a2a_payment_file,
+				payment_log_doc.a2a_encrypted_payment_file,
+			),
+			(
+				"neft",
+				payment_log_doc.neft_payment_file,
+				payment_log_doc.neft_encrypted_payment_file,
+			),
+			(
+				"rtgs",
+				payment_log_doc.rtgs_payment_file,
+				payment_log_doc.rtgs_encrypted_payment_file,
+			),
+			(
+				"imps",
+				payment_log_doc.imps_payment_file,
+				payment_log_doc.imps_encrypted_payment_file,
+			),
+		)
+
+		to_be_enc_mot = [
+			(mot, file_url)
+			for mot, file_url, encrypted_file_url in payment_files
+			if file_url and not encrypted_file_url
+		]
 
 		gpg = self.init_gpg()
 
 		recipient_fingerprint = self.hsbc_finger_print
 		signer_fingerprint = self.client_finger_print
 
-		file_url = ""
-		payment_file_path = get_file_path(payment_log_doc.payment_file)
+		encrypted_file_urls = {}
+		for mot, payment_file in to_be_enc_mot:
+			payment_file_path = get_file_path(payment_file)
 
-		with open(payment_file_path, "rb") as f:
-			encrypted = gpg.encrypt_file(
-				f,
-				recipients=[recipient_fingerprint],
-				sign=signer_fingerprint,
-				always_trust=True,
-				passphrase=self.get_password("pgp_private_key_password")
-				if self.pgp_private_key_password
-				else None,
-			)
-
-			if encrypted.ok:
-				file_name = frappe.get_value(
-					"File", {"file_url": payment_log_doc.payment_file}, "file_name"
-				)
-				create_new_folder("Encrypted", "Home/Payment Log")
-
-				file = frappe.new_doc("File")
-				file.content = encrypted.data
-				file.file_name = file_name + ".pgp"
-				file.folder = "Home/Payment Log/Encrypted"
-				file.attached_to_doctype = "Payment Log"
-				file.attached_to_name = log_id
-				file.attached_to_field = "encrypted_file"
-				file.file_type = "pgp"
-				file.insert()
-
-				frappe.db.set_value(
-					"Payment Log", log_id, "encrypted_file", file.file_url
+			with open(payment_file_path, "rb") as f:
+				encrypted = gpg.encrypt_file(
+					f,
+					recipients=[recipient_fingerprint],
+					sign=signer_fingerprint,
+					always_trust=True,
+					passphrase=self.get_password("pgp_private_key_password")
+					if self.pgp_private_key_password
+					else None,
 				)
 
-				file_url = file.file_url
+				if encrypted.ok:
+					file_name = frappe.get_value(
+						"File", {"file_url": payment_file}, "file_name"
+					)
+					create_new_folder("Encrypted", "Home/Payment Log")
 
-			else:
-				frappe.log_error("Encryption failed:", encrypted.stderr)
-				frappe.throw("Encryption failed please check the logs for more details")
+					file = frappe.new_doc("File")
+					file.content = encrypted.data
+					file.file_name = file_name + ".pgp"
+					file.folder = "Home/Payment Log/Encrypted"
+					file.attached_to_doctype = "Payment Log"
+					file.attached_to_name = log_id
+					file.is_private = 1
+					file.attached_to_field = f"{mot}_encrypted_payment_file"
+					file.file_type = "pgp"
+					file.insert()
 
-		if file_url:
-			frappe.db.set_value("Payment Log", log_id, "encrypted_file", file_url)
-			return file_url
-		else:
+					encrypted_file_urls[f"{mot}_encrypted_payment_file"] = file.file_url
+				else:
+					frappe.log_error(f"Encryption failed-> {mot}", encrypted.stderr)
+					frappe.throw(
+						"Encryption failed please check the logs for more details"
+					)
+
+		if encrypted_file_urls:
+			frappe.db.set_value("Payment Log", log_id, encrypted_file_urls)
+		elif to_be_enc_mot:
 			frappe.throw("Failed to encrypt payment file")
 
-	def decrypt_file(self, encrypted_file):
+	def decrypt_file(self, status_log_id, encrypted_file=None):
+		encrypted_file_path = encrypted_file
+		if not encrypted_file_path:
+			encrypted_file = frappe.db.get_value(
+				"Status Log", status_log_id, "status_file"
+			)
+			encrypted_file_path = get_file_path(encrypted_file)
+
 		if not encrypted_file:
 			frappe.throw("Payment file not found")
 
 		gpg = self.init_gpg()
 
-		encrypted_file_path = get_file_path(encrypted_file)
 		decrypted_data = None
 		with open(encrypted_file_path, "rb") as f:
 			decrypted = gpg.decrypt_file(
@@ -600,4 +729,7 @@ class HSBCBankHost(BaseHost):
 			else:
 				frappe.log_error("Decrypted file is not valid", decrypted.stderr)
 
-		return decrypted_data
+		if decrypted_data:
+			frappe.db.set_value(
+				"Status Log", status_log_id, "decrypted_data", decrypted_data.decode()
+			)
