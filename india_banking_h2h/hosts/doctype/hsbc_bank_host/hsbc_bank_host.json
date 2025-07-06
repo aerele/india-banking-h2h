@@ -33,7 +33,10 @@
   "port",
   "password",
   "reversefeed_folder",
-  "amended_from"
+  "amended_from",
+  "section_break_hrre",
+  "enable_payroll_payment",
+  "enable_imps_payment"
  ],
  "fields": [
   {
@@ -197,12 +200,30 @@
    "fieldtype": "Select",
    "label": "Authorisation",
    "options": "AUTH\nFDET\nFSUM\nILEV"
+  },
+  {
+   "default": "0",
+   "description": "Marks employee-type payments as salary when enabled",
+   "fieldname": "enable_payroll_payment",
+   "fieldtype": "Check",
+   "label": "Enable Payroll Payment"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_imps_payment",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Enable IMPS Payment"
+  },
+  {
+   "fieldname": "section_break_hrre",
+   "fieldtype": "Section Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-07-06 22:28:01.318748",
+ "modified": "2025-07-07 01:15:39.795438",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "HSBC Bank Host",
