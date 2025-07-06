@@ -96,8 +96,14 @@ class HSBCBankHost(BaseHost):
 		return self.upload_payment_files_to_server(log_id)
 
 	def get_status(self, status):
-		if status in ["ACCP"]:
+		if status in ["ACCP", "ACWC"]:
+			return "Accepted"
+		elif status in ["RJCT"]:
+			return "Rejected"
+		elif status in ["ACSC"]:
 			return "Processed"
+		elif status in ["ACSP"]:
+			return "Pending"
 		return ""
 
 	def format_response(self, status_log_id):
@@ -312,6 +318,9 @@ class HSBCBankHost(BaseHost):
 					"GrpHdr": {
 						"MsgId": payment_dict.unique_id,
 						"CreDtTm": get_datetime().strftime("%Y-%m-%dT%H:%M:%S"),
+						"Authstn": {
+							"Cd": self.file_authorisation,
+						},
 						"NbOfTxs": cstr(len(payment_dict.summary_details)),
 						"CtrlSum": cstr(payment_dict.total),
 						"InitgPty": {

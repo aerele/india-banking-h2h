@@ -14,6 +14,7 @@
   "account_number",
   "pc_id",
   "ifsc_code",
+  "file_authorisation",
   "column_break_qwyl",
   "sftp_private_key",
   "pgp_key_details_section",
@@ -188,12 +189,20 @@
    "fieldname": "ifsc_code",
    "fieldtype": "Data",
    "label": "IFSC Code"
+  },
+  {
+   "default": "ILEV",
+   "description": "AUTH - Pre Authorised File\n</br>\nFDET - File Level Authorisation Details\n</br>\nFSUM - File Level Authorisation Summary\n</br>\nILEV - Instruction Level Authorisation",
+   "fieldname": "file_authorisation",
+   "fieldtype": "Select",
+   "label": "Authorisation",
+   "options": "AUTH\nFDET\nFSUM\nILEV"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-07-01 16:55:23.168870",
+ "modified": "2025-07-06 22:28:01.318748",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "HSBC Bank Host",
