@@ -1,10 +1,12 @@
 # Copyright (c) 2025, Aerele Technologies Private Limited and contributors
 # For license information, please see license.txt
 
+import csv
 import json
 import os
 import stat
 import xml.etree.ElementTree as ET
+from io import StringIO
 from pathlib import Path
 from xml.dom.minidom import parseString
 from xml.etree.ElementTree import Element, SubElement, tostring
@@ -106,38 +108,93 @@ class HSBCBankHost(BaseHost):
 			return "Pending"
 		return ""
 
+	def status_code_and_description(self, status_code):
+		return {
+			"Returned": ("Failed", "Transaction returned by bene bank"),
+			"Processed by HSBC": (
+				"Processed",
+				"If the transaction is from HSBC to HSBC",
+			),
+			"Fresh Inwards": ("", "Late return or a fresh inward"),
+			"Credit Confirmed": (
+				"Accepted",
+				"Transaction settled in Beneficiary account",
+			),
+			"N": ("Accepted", "N10 msg yet to be received from bene bank"),
+			"Rejected by HUB": (
+				"Rejected",
+				"Txn rejected due to insufficient funds etc.",
+			),
+			"Cancelled by HSBC": ("Failure", "Txn cancelled by bank"),
+			"Sent to bene bank": ("Success", "RTGS settled at bene bank"),
+		}.get(status_code, ("Request Failure", f"Invalid status code: {status_code}"))
+
 	def format_response(self, status_log_id):
 		data = frappe.db.get_value("Status Log", status_log_id, "decrypted_data")
 		if not data:
-			return ""
+			return
 
-		ns = {"ns": "urn:iso:std:iso:20022:tech:xsd:pain.002.001.03"}
-
-		root = ET.fromstring(data)
 		formated_response = {}
-		for tx in root.findall(".//ns:TxInfAndSts", ns):
-			tx_id = tx.find("ns:StsId", ns)
-			tx_status = tx.find("ns:TxSts", ns)
-			instr_id = tx.find("ns:OrgnlInstrId", ns)
-			end_to_end_id = tx.find("ns:OrgnlEndToEndId", ns)
-			amount = tx.find(".//ns:Amt/ns:InstdAmt", ns)
-			currency = amount.attrib.get("Ccy") if amount is not None else "N/A"
+		if status_log_id or status_log_id.lower().endswith("csv"):
+			io_object = StringIO(data)
+			csv_reader = csv.DictReader(io_object)
 
-			tx_id = tx_id.text if tx_id is not None else ""
-			tx_status = tx_status.text if tx_status is not None else ""
-			instr_id = instr_id.text if instr_id is not None else ""
-			end_to_end_id = end_to_end_id.text if end_to_end_id is not None else ""
-			amount = amount.text if amount is not None else ""
+			csv_data = list(csv_reader)
 
-			formated_response[instr_id] = {
-				"end_to_end_id": end_to_end_id,
-				"status": self.get_status(tx_status),
-				"status_code": tx_status,
-				"amount": amount,
-				"currency": currency,
-				"transaction_id": tx_id,
-				"utr_number": "",
-			}
+			for data in csv_data:
+				if data:
+					transaction_id = data.get("Customer Reference Number")
+					tx_status = data.get("Status")
+					status, status_description = self.status_code_and_description(
+						tx_status
+					)
+
+					formated_response[transaction_id] = {
+						"unique_id": transaction_id,
+						"value_date": data.get("Value Date"),
+						"party_name": data.get("Beneficiary Name"),
+						"party_account_no": data.get("Beneficiary Account Number"),
+						"party_ifsc_code": data.get("Beneficiary Bank IFS"),
+						"amount": data.get("Amount"),
+						"bank_ref_no": data.get("Bank Ref no"),
+						"positive_return_confirm_time": data.get(
+							"Positive/Return Confirm Time"
+						),
+						"return_reject_reason": data.get("Return/Reject Reason"),
+						"return_utr_no": data.get("Return UTR No"),
+						"return_ifsc_code": data.get("Return IFSC Code"),
+						"status_code": tx_status,
+						"status": status,
+						"status_description": status_description,
+						"utr_number": data.get("Transaction Reference no"),
+					}
+		else:
+			ns = {"ns": "urn:iso:std:iso:20022:tech:xsd:pain.002.001.03"}
+
+			root = ET.fromstring(data)
+			for tx in root.findall(".//ns:TxInfAndSts", ns):
+				tx_id = tx.find("ns:StsId", ns)
+				tx_status = tx.find("ns:TxSts", ns)
+				instr_id = tx.find("ns:OrgnlInstrId", ns)
+				end_to_end_id = tx.find("ns:OrgnlEndToEndId", ns)
+				amount = tx.find(".//ns:Amt/ns:InstdAmt", ns)
+				currency = amount.attrib.get("Ccy") if amount is not None else "N/A"
+
+				tx_id = tx_id.text if tx_id is not None else ""
+				tx_status = tx_status.text if tx_status is not None else ""
+				instr_id = instr_id.text if instr_id is not None else ""
+				end_to_end_id = end_to_end_id.text if end_to_end_id is not None else ""
+				amount = amount.text if amount is not None else ""
+
+				formated_response[instr_id] = {
+					"unique_id": end_to_end_id,
+					"status": self.get_status(tx_status),
+					"status_code": tx_status,
+					"amount": amount,
+					"currency": currency,
+					"transaction_id": tx_id,
+					"utr_number": "",
+				}
 
 		if formated_response:
 			frappe.db.set_value(
@@ -594,10 +651,14 @@ class HSBCBankHost(BaseHost):
 				if (item.st_mode & 0o100000)
 			]
 			for file_name in reversefeed_files:
-				if frappe.db.exists("Status Log", {"source_file_name": file_name}):
-					self.decrypt_file(file_name)
-					self.format_response(file_name)
-					continue
+				file_type = "TXT"
+				if file_name.lower().endswith("csv"):
+					file_type = "CSV"
+				else:
+					if frappe.db.exists("Status Log", {"source_file_name": file_name}):
+						self.decrypt_file(file_name)
+						self.format_response(file_name)
+						continue
 
 				create_new_folder("Status Log", "Home")
 
@@ -607,7 +668,7 @@ class HSBCBankHost(BaseHost):
 				r_file.folder = "Home/Status Log"
 				r_file.attached_to_doctype = "Status Log"
 				r_file.attached_to_name = file_name
-				r_file.file_type = "TXT"
+				r_file.file_type = file_type
 				r_file.is_private = 1
 				r_file.attached_to_field = "status_file"
 				r_file.insert()
