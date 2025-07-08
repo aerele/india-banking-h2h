@@ -362,12 +362,22 @@ class HSBCBankHost(BaseHost):
 
 		unique_id = get_id(payment_details.name)
 
+		company_address = {}
+		if payment_details.company_address:
+			company_address = json.loads(payment_details.company_address)
+		address = frappe._dict(company_address)
+
 		payment_dict = frappe._dict(
 			{
 				"unique_id": f"{unique_id}_{mot}",
 				"company_name": payment_details.company,
 				"summary_details": self.summary_details[mot]["summary"],
 				"total": self.summary_details[mot]["total"],
+				"street_name": ", ".join(address.get("AddressLine", [])),
+				"building_no": address.get("AddressLine", [1])[0],
+				"post_code": address.get("PostCode"),
+				"town_name": address.get("TownName"),
+				"country": address.get("Country", "").upper(),
 			}
 		)
 
@@ -419,12 +429,16 @@ class HSBCBankHost(BaseHost):
 						"Dbtr": {
 							"Nm": payment_dict.company_name,
 							"PstlAdr": {
-								"StrtNm": "",
-								**({"BldgNb": ""} if mot == "payroll" else {}),
-								"PstCd": "",
-								"TwnNm": "IND",
+								"StrtNm": payment_dict.street_name or "",
+								**(
+									{"BldgNb": payment_dict.building_no or ""}
+									if mot == "payroll"
+									else {}
+								),
+								"PstCd": payment_dict.post_code or "",
+								"TwnNm": payment_dict.town_name or "IND",
 								"CtrySubDvsn": "",
-								"Ctry": "IN",
+								"Ctry": payment_dict.country or "IN",
 							},
 						},
 						"DbtrAcct": {
