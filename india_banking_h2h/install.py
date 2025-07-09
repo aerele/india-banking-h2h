@@ -8,10 +8,7 @@ from india_banking_h2h.defaults import (
 
 
 def after_install():
-	click.secho("* Updating India Banking Host to Host Customisations")
-	create_bank_doctype()
-	create_default_banks()
-	create_host_settings()
+	pass
 
 
 def create_default_banks():

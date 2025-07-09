@@ -4,6 +4,7 @@ STD_BANK_LIST = [
 	"ICICI Bank",
 	"Axis Bank",
 	"Kotak Mahindra Bank",
+	"HSBC Bank",
 ]
 
 DEFAULT_HOSTS = [
