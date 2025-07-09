@@ -135,7 +135,7 @@ class HSBCBankHost(BaseHost):
 			return
 
 		formated_response = {}
-		if status_log_id or status_log_id.lower().endswith("csv"):
+		if status_log_id and status_log_id.lower().endswith("csv"):
 			io_object = StringIO(data)
 			csv_reader = csv.DictReader(io_object)
 
