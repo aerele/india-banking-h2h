@@ -117,7 +117,7 @@ class HSBCBankHost(BaseHost):
 			),
 			"Fresh Inwards": ("", "Late return or a fresh inward"),
 			"Credit Confirmed": (
-				"Accepted",
+				"Processed",
 				"Transaction settled in Beneficiary account",
 			),
 			"N": ("Accepted", "N10 msg yet to be received from bene bank"),
@@ -125,17 +125,21 @@ class HSBCBankHost(BaseHost):
 				"Rejected",
 				"Txn rejected due to insufficient funds etc.",
 			),
-			"Cancelled by HSBC": ("Failure", "Txn cancelled by bank"),
-			"Sent to bene bank": ("Success", "RTGS settled at bene bank"),
+			"Cancelled by HSBC": ("Rejected", "Txn cancelled by bank"),
+			"Sent to bene bank": ("Processed", "RTGS settled at bene bank"),
 		}.get(status_code, ("Request Failure", f"Invalid status code: {status_code}"))
 
 	def format_response(self, status_log_id):
 		data = frappe.db.get_value("Status Log", status_log_id, "decrypted_data")
 		if not data:
 			return
-
+		is_report_data = (
+			status_log_id.lower().endswith("csv")
+			or status_log_id.lower().startswith("inpp")
+			or status_log_id.lower().startswith("inbulk")
+		)
 		formated_response = {}
-		if status_log_id and status_log_id.lower().endswith("csv"):
+		if is_report_data:
 			io_object = StringIO(data)
 			csv_reader = csv.DictReader(io_object)
 

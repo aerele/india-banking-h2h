@@ -75,7 +75,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-07-03 11:24:36.494240",
+ "modified": "2025-08-02 18:09:24.133799",
  "modified_by": "Administrator",
  "module": "India Banking H2H",
  "name": "Status Log",
@@ -95,6 +95,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],
