@@ -15,7 +15,7 @@ import frappe
 import gnupg
 import paramiko
 from frappe.core.api.file import create_new_folder
-from frappe.utils import cint, cstr, get_datetime, getdate
+from frappe.utils import cint, cstr, get_datetime, getdate, flt
 from frappe.utils.file_manager import get_file_path
 
 from india_banking_h2h.hosts.base_host import BaseHost
@@ -399,7 +399,7 @@ class HSBCBankHost(BaseHost):
 							else self.file_authorisation,
 						},
 						"NbOfTxs": cstr(len(payment_dict.summary_details)),
-						"CtrlSum": cstr(payment_dict.total),
+						"CtrlSum": cstr(flt(payment_dict.total, 3)), #using bank round method
 						"InitgPty": {
 							**(
 								{"Nm": payment_dict.company_name}
