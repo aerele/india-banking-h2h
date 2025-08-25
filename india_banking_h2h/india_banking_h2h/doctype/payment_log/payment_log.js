@@ -12,6 +12,30 @@ frappe.ui.form.on("Payment Log", {
 				};
 			});
 		});
+		frappe
+			.call({
+				method: "india_banking_h2h.utils.get_disbled_payment_modes",
+				args: {
+					doctype: frm.doc.host,
+					docname: frm.doc.host_name,
+				},
+			})
+			.then((r) => {
+				if (r.message) {
+					Object.entries(r.message).forEach((ele) => {
+						let [mode, value] = ele;
+						if (!frm.doc[`${mode}_payment_file`]) {
+							let _column = $(`[data-fieldname="${mode}_column"]`);
+							if (!value) {
+								_column.remove();
+							}
+							frm.toggle_display(`${mode}_payment_file`, value);
+							frm.toggle_display(`${mode}_encrypted_payment_file`, value);
+							frm.toggle_display(`uploaded_${mode}`, value);
+						}
+					});
+				}
+			});
 	},
 
 	pretty_format_json(frm) {

@@ -36,7 +36,8 @@
   "amended_from",
   "section_break_hrre",
   "enable_payroll_payment",
-  "enable_imps_payment"
+  "enable_imps_payment",
+  "enable_rtgs_payment"
  ],
  "fields": [
   {
@@ -218,12 +219,19 @@
   {
    "fieldname": "section_break_hrre",
    "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_rtgs_payment",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Enable RTGS Payment"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-07-07 01:15:39.795438",
+ "modified": "2025-08-21 14:53:16.688762",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "HSBC Bank Host",
@@ -244,6 +252,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

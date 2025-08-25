@@ -13,6 +13,22 @@ def get_default_hosts():
 	return DEFAULT_HOSTS
 
 
+@frappe.whitelist()
+def get_disbled_payment_modes(
+	doctype: str = "HSBC Bank Host", docname: str = ""
+) -> list:
+	return frappe.get_value(
+		"HSBC Bank Host",
+		docname,
+		[
+			"enable_payroll_payment as payroll",
+			"enable_imps_payment as imps",
+			"enable_rtgs_payment as rtgs",
+		],
+		as_dict=True,
+	)
+
+
 def get_id(length: int = 10, text: str = "") -> str:
 	"""
 	Generate a random string ID of a specified length, optionally prefixed with a given text.

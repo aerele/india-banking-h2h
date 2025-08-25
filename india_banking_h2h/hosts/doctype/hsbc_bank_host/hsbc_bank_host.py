@@ -15,7 +15,7 @@ import frappe
 import gnupg
 import paramiko
 from frappe.core.api.file import create_new_folder
-from frappe.utils import cint, cstr, get_datetime, getdate, flt
+from frappe.utils import cint, cstr, flt, get_datetime, getdate
 from frappe.utils.file_manager import get_file_path
 
 from india_banking_h2h.hosts.base_host import BaseHost
@@ -26,7 +26,7 @@ class HSBCBankHost(BaseHost):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.doc = frappe._dict(kwargs.get("doc", {}))
-		self.encrypt_payment_file = True
+		self.encrypt_payment_file = False
 		self.summary_details = {}
 
 	def is_h2h_enabled(self):
@@ -314,11 +314,24 @@ class HSBCBankHost(BaseHost):
 	def update_summary_details(self):
 		file_mot = []
 		payment_details = frappe._dict(self.doc)
+		self.is_a2_payments = payment_details.currency != "INR"
+		self.transaction_currency = (
+			payment_details.currency if self.is_a2_payments else "INR"
+		)
 
 		for summary in payment_details.summary:
 			summary = frappe._dict(summary)
 			mot = ""
-			if summary.party_type == "Employee" and self.enable_payroll_payment:
+			if self.is_a2_payments:
+				mot = "a2"
+				if self.summary_details.get(mot):
+					self.summary_details[mot]["summary"].append(summary)
+					self.summary_details[mot]["total"] += summary.base_amount
+				else:
+					self.summary_details[mot] = {}
+					self.summary_details[mot]["summary"] = [summary]
+					self.summary_details[mot]["total"] = summary.base_amount
+			elif summary.party_type == "Employee" and self.enable_payroll_payment:
 				mot = "payroll"
 				if self.summary_details.get(mot):
 					self.summary_details[mot]["summary"].append(summary)
@@ -327,7 +340,9 @@ class HSBCBankHost(BaseHost):
 					self.summary_details[mot] = {}
 					self.summary_details[mot]["summary"] = [summary]
 					self.summary_details[mot]["total"] = summary.amount
-			elif "rtgs" in summary.mode_of_transfer.lower():
+			elif (
+				"rtgs" in summary.mode_of_transfer.lower() and self.enable_rtgs_payment
+			):
 				mot = "rtgs"
 				if self.summary_details.get(mot):
 					self.summary_details[mot]["summary"].append(summary)
@@ -399,7 +414,9 @@ class HSBCBankHost(BaseHost):
 							else self.file_authorisation,
 						},
 						"NbOfTxs": cstr(len(payment_dict.summary_details)),
-						"CtrlSum": cstr(flt(payment_dict.total, 3)), #using bank round method
+						"CtrlSum": cstr(
+							flt(payment_dict.total, 3)
+						),  # using bank round method
 						"InitgPty": {
 							**(
 								{"Nm": payment_dict.company_name}
@@ -436,12 +453,12 @@ class HSBCBankHost(BaseHost):
 								"StrtNm": payment_dict.street_name or "",
 								**(
 									{"BldgNb": payment_dict.building_no or ""}
-									if mot == "payroll"
+									if mot in ["payroll", "a2"]
 									else {}
 								),
 								"PstCd": payment_dict.post_code or "",
 								"TwnNm": payment_dict.town_name or "IND",
-								"CtrySubDvsn": "",
+								**({"CtrySubDvsn": ""} if mot != "a2" else {}),
 								"Ctry": payment_dict.country or "IN",
 							},
 						},
@@ -451,7 +468,7 @@ class HSBCBankHost(BaseHost):
 									"Id": self.account_number,
 								}
 							},
-							"Ccy": "INR",
+							**({"Ccy": "INR"} if mot != "a2" else {}),
 						},
 						"DbtrAgt": {
 							"FinInstnId": {
@@ -462,7 +479,7 @@ class HSBCBankHost(BaseHost):
 								},
 							}
 						},
-						**({"ChrgBr": "DEBT"} if mot == "payroll" else {}),
+						**({"ChrgBr": "DEBT"} if mot in ["payroll", "a2"] else {}),
 						**self.get_transactions(mot, payment_dict.summary_details),
 					},
 				},
@@ -474,37 +491,85 @@ class HSBCBankHost(BaseHost):
 	def get_transactions(self, mot, summary_details):
 		transactions = {}
 		for summary in summary_details:
+			address_details = frappe._dict(summary.address_details)
 			tx_dict = {
 				f"CdtTrfTxInf-{summary.name}": {
 					"PmtId": {
 						"InstrId": summary.name,
 						"EndToEndId": summary.name,
 					},
-					"Amt": {"InstdAmt": {"@Ccy": "INR", "#text": cstr(summary.amount)}},
+					"Amt": {
+						"InstdAmt": {
+							"@Ccy": "INR" if mot != "a2" else self.transaction_currency,
+							"#text": cstr(summary.amount)
+							if mot != "a2"
+							else cstr(summary.base_amount),
+						}
+					},
 					**({"ChrgBr": "DEBT"} if mot == "payroll" else {}),
 					"ChrgBr": "DEBT",
 					"CdtrAgt": {
 						"FinInstnId": {
-							"ClrSysMmbId": {
-								"MmbId": summary.branch_code,
-							},
+							**(
+								{
+									"ClrSysMmbId": {
+										"MmbId": summary.branch_code,
+									}
+								}
+								if mot != "a2"
+								else {"BIC": summary.swift_number}
+							),
 							**({"Nm": summary.bank} if mot == "payroll" else {}),
 							"PstlAdr": {
-								"Ctry": "IN",
+								"Ctry": "IN"
+								if mot != "a2"
+								else address_details.CountryCode,
 							},
 						}
 					},
 					"Cdtr": {
 						"Nm": summary.party_name or summary.party,
-						"PstlAdr": {"TwnNm": "IND", "Ctry": "IN"},
+						"PstlAdr": (
+							{"TwnNm": "IND", "Ctry": "IN"}
+							if mot != "a2"
+							else {
+								"StrtNm": address_details.StreetName or "",
+								"BldgNb": address_details.BuildingNumber or "",
+								"PstCd": address_details.PostCode or "",
+								"TwnNm": address_details.TownName or "IND",
+								"CtrySubDvsn": address_details.CountySubDivision or "",
+								"Ctry": address_details.CountryCode or "IN",
+							}
+						),
 					},
 					"CdtrAcct": {
 						"Id": {
+							**({"IBAN": summary.iban} if mot == "a2" else {}),
 							"Othr": {
 								"Id": summary.bank_account_no,
-							}
+							},
 						}
 					},
+					**(
+						{
+							"InstrForCdtrAgt": {
+								"InstrInf": f"ACC/Export Country : {summary.currency}",
+							}
+						}
+						if mot == "a2"
+						else {}
+					),
+					**(
+						{
+							"RgltryRptg": {
+								"Dtls": {
+									"Inf": "BUSINESS/GOODS TRADE" or "",
+								}
+							}
+						}
+						if mot == "a2"
+						else {}
+					),
 					**(
 						{
 							"RltdRmtInf": {
@@ -518,40 +583,44 @@ class HSBCBankHost(BaseHost):
 								},
 							},
 						}
-						if mot != "payroll"
+						if mot not in ["a2", "payroll"]
 						else {}
 					),
-					"RmtInf": {
-						"Ustrd": f"SALARY for {summary.party}"
-						if mot == "payroll"
-						else f"Payment Reference {get_id(self.doc.name)}-{summary.name}",
-						**(
-							{
-								"Strd": {
-									"RfrdDocInf": {
-										"Nb": summary.payment_entry
-										or summary.journal_entry,
-										"RltdDt": getdate().strftime("%Y-%m-%d"),
-									},
-									"RfrdDocAmt": {
-										"DuePyblAmt": {
-											"@Ccy": "INR",
-											"#text": cstr(summary.amount),
-										}
-									},
-									"CdtrRefInf": {
-										"Tp": {"CdOrPrtry": {"Prtry": "/TDSA/0.00"}},
-										"Ref": "/NAMT/0.50",
-									},
-									"AddtlRmtInf": "/NARR/" + summary.remarks
-									if summary.remarks
-									else "",
+					"RmtInf": (
+						{
+							"Ustrd": f"Payment Reference {get_id(self.doc.name)}-{summary.name}"
+						}
+						if mot not in ["payroll", "a2"]
+						else {"Ustrd": summary.purpose_of_transaction}
+						if mot == "a2"
+						else {"Ustrd": f"SALARY for {summary.party}"}
+					),
+					**(
+						{
+							"Strd": {
+								"RfrdDocInf": {
+									"Nb": summary.payment_entry
+									or summary.journal_entry,
+									"RltdDt": getdate().strftime("%Y-%m-%d"),
 								},
-							}
-							if mot != "payroll"
-							else {}
-						),
-					},
+								"RfrdDocAmt": {
+									"DuePyblAmt": {
+										"@Ccy": "INR",
+										"#text": cstr(summary.amount),
+									}
+								},
+								"CdtrRefInf": {
+									"Tp": {"CdOrPrtry": {"Prtry": "/TDSA/0.00"}},
+									"Ref": "/NAMT/0.50",
+								},
+								"AddtlRmtInf": "/NARR/" + summary.remarks
+								if summary.remarks
+								else "",
+							},
+						}
+						if mot not in ["a2", "payroll"]
+						else {}
+					),
 				}
 			}
 			transactions.update(tx_dict)
