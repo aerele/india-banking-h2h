@@ -26,7 +26,7 @@ class HSBCBankHost(BaseHost):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.doc = frappe._dict(kwargs.get("doc", {}))
-		self.encrypt_payment_file = False
+		self.encrypt_payment_file = True
 		self.summary_details = {}
 
 	def is_h2h_enabled(self):
@@ -710,9 +710,15 @@ class HSBCBankHost(BaseHost):
 				not_uploaded_encrypted_payment_files.append(
 					("imps", payment_log_doc.imps_encrypted_payment_file)
 				)
+		if payment_log_doc.a2_encrypted_payment_file:
+			if not payment_log_doc.uploaded_a2:
+				not_uploaded_encrypted_payment_files.append(
+					("a2", payment_log_doc.a2_encrypted_payment_file)
+				)
 
 		if not not_uploaded_encrypted_payment_files:
-			return
+			payment_log_doc.reload()
+			return payment_log_doc.get_summary_details()
 
 		transport = None
 		sftp = None
@@ -895,6 +901,11 @@ class HSBCBankHost(BaseHost):
 				"imps",
 				payment_log_doc.imps_payment_file,
 				payment_log_doc.imps_encrypted_payment_file,
+			),
+			(
+				"a2",
+				payment_log_doc.a2_payment_file,
+				payment_log_doc.a2_encrypted_payment_file,
 			),
 		)
 
