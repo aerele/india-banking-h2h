@@ -381,11 +381,11 @@ class HSBCBankHost(BaseHost):
 				mot = "a2"
 				if self.summary_details.get(mot):
 					self.summary_details[mot]["summary"].append(summary)
-					self.summary_details[mot]["total"] += summary.base_amount
+					self.summary_details[mot]["total"] += summary.amount
 				else:
 					self.summary_details[mot] = {}
 					self.summary_details[mot]["summary"] = [summary]
-					self.summary_details[mot]["total"] = summary.base_amount
+					self.summary_details[mot]["total"] = summary.amount
 			elif summary.party_type == "Employee" and self.enable_payroll_payment:
 				mot = "payroll"
 				if self.summary_details.get(mot):
@@ -470,7 +470,10 @@ class HSBCBankHost(BaseHost):
 						},
 						"NbOfTxs": cstr(len(payment_dict.summary_details)),
 						"CtrlSum": cstr(
-							flt(payment_dict.total, 3)
+							flt(
+								payment_dict.total,
+								self.get_currency_precision(self.transaction_currency),
+							)
 						),  # using bank round method
 						"InitgPty": {
 							**(
@@ -546,7 +549,7 @@ class HSBCBankHost(BaseHost):
 	def get_transactions(self, mot, summary_details):
 		transactions = {}
 		for summary in summary_details:
-			address_details = frappe._dict(summary.address_details)
+			address_details = frappe._dict(summary.address_details or {})
 			tx_dict = {
 				f"CdtTrfTxInf-{summary.name}": {
 					"PmtId": {
@@ -558,7 +561,7 @@ class HSBCBankHost(BaseHost):
 							"@Ccy": "INR" if mot != "a2" else self.transaction_currency,
 							"#text": cstr(summary.amount)
 							if mot != "a2"
-							else cstr(summary.base_amount),
+							else cstr(summary.amount),
 						}
 					},
 					**({"ChrgBr": "DEBT"} if mot == "payroll" else {}),
@@ -642,16 +645,12 @@ class HSBCBankHost(BaseHost):
 						else {}
 					),
 					"RmtInf": (
-						{
-							"Ustrd": f"Payment Reference {get_id(self.doc.name)}-{summary.name}"
-						}
-						if mot not in ["payroll", "a2"]
-						else {"Ustrd": summary.purpose_of_transaction}
+						{"Ustrd": summary.purpose_of_transaction}
 						if mot == "a2"
 						else {"Ustrd": f"SALARY for {summary.party}"}
-					),
-					**(
-						{
+						if mot == "payroll"
+						else {
+							"Ustrd": f"Payment Reference {get_id(self.doc.name)}-{summary.name}",
 							"Strd": {
 								"RfrdDocInf": {
 									"Nb": summary.payment_entry
@@ -673,8 +672,6 @@ class HSBCBankHost(BaseHost):
 								else "",
 							},
 						}
-						if mot not in ["a2", "payroll"]
-						else {}
 					),
 				}
 			}

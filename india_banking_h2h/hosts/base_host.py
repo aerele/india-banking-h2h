@@ -13,6 +13,11 @@ class BaseHost(Document):
 		super().__init__(*args, **kwargs)
 		self.validate_user_permission()
 
+	def get_currency_precision(self, currency=None):
+		if currency in ["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"]:
+			return 3
+		return 2
+
 	def is_active(self):
 		if not self.active:
 			frappe.throw("Host is inactive. Please contact admin.")
