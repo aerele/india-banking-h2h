@@ -517,7 +517,7 @@ class HSBCBankHost(BaseHost):
 								"PstCd": payment_dict.post_code or "",
 								"TwnNm": payment_dict.town_name or "IND",
 								**({"CtrySubDvsn": ""} if mot != "a2" else {}),
-								"Ctry": payment_dict.country or "IN",
+								"Ctry": "IN",
 							},
 						},
 						"DbtrAcct": {
@@ -564,8 +564,7 @@ class HSBCBankHost(BaseHost):
 							else cstr(summary.amount),
 						}
 					},
-					**({"ChrgBr": "DEBT"} if mot == "payroll" else {}),
-					"ChrgBr": "DEBT",
+					**({"ChrgBr": "DEBT"} if mot not in ["payroll", "a2"] else {}),
 					"CdtrAgt": {
 						"FinInstnId": {
 							**(
@@ -610,22 +609,13 @@ class HSBCBankHost(BaseHost):
 					},
 					**(
 						{
-							"InstrForCdtrAgt": {
-								"InstrInf": f"ACC/Export Country : {summary.currency}",
-							}
-						}
-						if mot == "a2"
-						else {}
-					),
-					**(
-						{
 							"RgltryRptg": {
 								"Dtls": {
-									"Inf": "BUSINESS/GOODS TRADE" or "",
+									"Inf": "/ACC/TRADE A1 PAYMENT",
 								}
 							}
 						}
-						if mot == "a2"
+						if mot == "trade"
 						else {}
 					),
 					**(
@@ -654,6 +644,7 @@ class HSBCBankHost(BaseHost):
 							"Strd": {
 								"RfrdDocInf": {
 									"Nb": summary.payment_entry
+									or summary.parent
 									or summary.journal_entry,
 									"RltdDt": getdate().strftime("%Y-%m-%d"),
 								},
