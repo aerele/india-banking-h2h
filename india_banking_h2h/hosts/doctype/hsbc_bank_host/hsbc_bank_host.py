@@ -601,10 +601,15 @@ class HSBCBankHost(BaseHost):
 					},
 					"CdtrAcct": {
 						"Id": {
-							**({"IBAN": summary.iban} if mot == "a2" else {}),
-							"Othr": {
-								"Id": summary.bank_account_no,
-							},
+							**(
+								{"IBAN": summary.iban}
+								if (mot == "a2" and summary.iban)
+								else {
+									"Othr": {
+										"Id": summary.bank_account_no,
+									}
+								}
+							),
 						}
 					},
 					**(
