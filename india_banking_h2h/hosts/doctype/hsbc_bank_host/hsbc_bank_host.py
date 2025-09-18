@@ -369,7 +369,9 @@ class HSBCBankHost(BaseHost):
 	def update_summary_details(self):
 		file_mot = []
 		payment_details = frappe._dict(self.doc)
-		self.is_a2_payments = payment_details.currency != "INR"
+		self.is_a2_payments = (
+			payment_details.currency and payment_details.currency != "INR"
+		)
 		self.transaction_currency = (
 			payment_details.currency if self.is_a2_payments else "INR"
 		)
