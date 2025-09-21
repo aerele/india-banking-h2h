@@ -182,11 +182,14 @@ class HSBCBankHost(BaseHost):
 			try:
 				group_status_description = root.find(
 					".//ns:OrgnlGrpInfAndSts/ns:StsRsnInf/ns:AddtlInf", ns
-				) or root.find(
+				)
+				if group_status_description is None:
+					group_status_description = root.find(
 					".//ns:OrgnlPmtInfAndSts/ns:TxInfAndSts/ns:StsRsnInf/ns:AddtlInf",
 					ns,
 				)
-				group_status_description = group_status_description.text
+				if group_status_description is not None:
+					group_status_description = group_status_description.text
 			except Exception as e:
 				group_status_description = "Payment Rejected: " + str(e)
 
