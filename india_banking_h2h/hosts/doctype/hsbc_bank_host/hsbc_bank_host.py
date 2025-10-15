@@ -15,7 +15,7 @@ import frappe
 import gnupg
 import paramiko
 from frappe.core.api.file import create_new_folder
-from frappe.utils import cint, cstr, get_datetime, getdate, flt
+from frappe.utils import cint, cstr, flt, get_datetime, getdate
 from frappe.utils.file_manager import get_file_path
 
 from india_banking_h2h.hosts.base_host import BaseHost
@@ -176,29 +176,70 @@ class HSBCBankHost(BaseHost):
 			ns = {"ns": "urn:iso:std:iso:20022:tech:xsd:pain.002.001.03"}
 
 			root = ET.fromstring(data)
-			for tx in root.findall(".//ns:TxInfAndSts", ns):
-				tx_id = tx.find("ns:StsId", ns)
-				tx_status = tx.find("ns:TxSts", ns)
-				instr_id = tx.find("ns:OrgnlInstrId", ns)
-				end_to_end_id = tx.find("ns:OrgnlEndToEndId", ns)
-				amount = tx.find(".//ns:Amt/ns:InstdAmt", ns)
-				currency = amount.attrib.get("Ccy") if amount is not None else "N/A"
+			msg_id = root.find(".//ns:OrgnlGrpInfAndSts/ns:OrgnlMsgId", ns).text
+			group_status = root.find(".//ns:OrgnlGrpInfAndSts/ns:GrpSts", ns).text
+			group_status_description = ""
+			try:
+				group_status_description = root.find(
+					".//ns:OrgnlGrpInfAndSts/ns:StsRsnInf/ns:AddtlInf", ns
+				)
+				if group_status_description is None:
+					group_status_description = root.find(
+						".//ns:OrgnlPmtInfAndSts/ns:TxInfAndSts/ns:StsRsnInf/ns:AddtlInf",
+						ns,
+					)
+				if group_status_description is not None:
+					group_status_description = group_status_description.text
+			except Exception as e:
+				group_status_description = "Payment Rejected: " + str(e)
 
-				tx_id = tx_id.text if tx_id is not None else ""
-				tx_status = tx_status.text if tx_status is not None else ""
-				instr_id = instr_id.text if instr_id is not None else ""
-				end_to_end_id = end_to_end_id.text if end_to_end_id is not None else ""
-				amount = amount.text if amount is not None else ""
+			payment_for = ""
+			if "_neft" in msg_id:
+				payment_for = "_neft"
+			elif "_a2" in msg_id:
+				payment_for = "_a2"
+			elif "_imps" in msg_id:
+				payment_for = "_imps"
+			elif "_rtgs" in msg_id:
+				payment_for = "_rtgs"
+			elif "_payroll" in msg_id:
+				payment_for = "_payroll"
 
-				formated_response[instr_id] = {
-					"unique_id": end_to_end_id,
-					"status": self.get_status(tx_status),
-					"status_code": tx_status,
-					"amount": amount,
-					"currency": currency,
-					"transaction_id": tx_id,
-					"utr_number": "",
-				}
+			payment_id = msg_id[: -len(payment_for)]
+
+			if group_status == "RJCT":
+				self.update_group_rejected_status(
+					formated_response,
+					payment_id,
+					group_status,
+					group_status_description,
+				)
+			else:
+				for tx in root.findall(".//ns:TxInfAndSts", ns):
+					tx_id = tx.find("ns:StsId", ns)
+					tx_status = tx.find("ns:TxSts", ns)
+					instr_id = tx.find("ns:OrgnlInstrId", ns)
+					end_to_end_id = tx.find("ns:OrgnlEndToEndId", ns)
+					amount = tx.find(".//ns:Amt/ns:InstdAmt", ns)
+					currency = amount.attrib.get("Ccy") if amount is not None else "N/A"
+
+					tx_id = tx_id.text if tx_id is not None else ""
+					tx_status = tx_status.text if tx_status is not None else ""
+					instr_id = instr_id.text if instr_id is not None else ""
+					end_to_end_id = (
+						end_to_end_id.text if end_to_end_id is not None else ""
+					)
+					amount = amount.text if amount is not None else ""
+
+					formated_response[instr_id] = {
+						"unique_id": end_to_end_id,
+						"status": self.get_status(tx_status),
+						"status_code": tx_status,
+						"amount": amount,
+						"currency": currency,
+						"transaction_id": tx_id,
+						"utr_number": "",
+					}
 
 		if formated_response:
 			frappe.db.set_value(
@@ -208,6 +249,23 @@ class HSBCBankHost(BaseHost):
 		status_log = frappe.get_doc("Status Log", status_log_id)
 		status_log.reload()
 		status_log.update_payment_status()
+
+	def update_group_rejected_status(
+		self, formated_response, payment_id, tx_status, reject_reason
+	):
+		logs = frappe.db.get_all(
+			"Payment Log Summary",
+			{"parent": payment_id, "parenttype": "Payment Log"},
+			pluck="payment_id",
+		)
+		if logs:
+			for logid in logs:
+				formated_response[logid] = {
+					"unique_id": logid,
+					"status": self.get_status(tx_status),
+					"status_code": tx_status,
+					"message": reject_reason,
+				}
 
 	def build_xml_from_dict(self, parent, data):
 		if isinstance(data, dict):
@@ -399,7 +457,9 @@ class HSBCBankHost(BaseHost):
 							else self.file_authorisation,
 						},
 						"NbOfTxs": cstr(len(payment_dict.summary_details)),
-						"CtrlSum": cstr(flt(payment_dict.total, 3)), #using bank round method
+						"CtrlSum": cstr(
+							flt(payment_dict.total, 2)
+						),  # max possible rounding for bank is 2 decimal like .99 consider 1RS
 						"InitgPty": {
 							**(
 								{"Nm": payment_dict.company_name}
@@ -588,7 +648,8 @@ class HSBCBankHost(BaseHost):
 				)
 
 		if not not_uploaded_encrypted_payment_files:
-			return
+			payment_log_doc.reload()
+			return payment_log_doc.get_summary_details()
 
 		transport = None
 		sftp = None
