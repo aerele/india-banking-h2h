@@ -36,7 +36,16 @@
   "amended_from",
   "section_break_hrre",
   "enable_payroll_payment",
-  "enable_imps_payment"
+  "enable_imps_payment",
+  "connection_tab",
+  "hsbc_section",
+  "auto_fetch",
+  "reversefeed_files",
+  "force_fetch_status",
+  "column_break_sxrt",
+  "status",
+  "last_connection_check",
+  "check_status"
  ],
  "fields": [
   {
@@ -218,12 +227,65 @@
   {
    "fieldname": "section_break_hrre",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "connection_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connection"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "label": "Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "check_status",
+   "fieldtype": "Button",
+   "label": "Check Status",
+   "options": "check_status"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "hsbc_section",
+   "fieldtype": "Section Break",
+   "label": "HSBC",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "When enabled, the system will automatically check and fetch status files from the mail server every 5 minutes. If disabled, you must fetch the files manually.",
+   "fieldname": "auto_fetch",
+   "fieldtype": "Check",
+   "label": "Auto Fetch Status Files"
+  },
+  {
+   "fieldname": "last_connection_check",
+   "fieldtype": "Datetime",
+   "label": "Last Connection Check",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reversefeed_files",
+   "fieldtype": "Long Text",
+   "label": "Reversefeed Files",
+   "read_only": 1
+  },
+  {
+   "fieldname": "force_fetch_status",
+   "fieldtype": "Button",
+   "label": "Force Fetch Status",
+   "options": "force_fetch_status"
+  },
+  {
+   "fieldname": "column_break_sxrt",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-07-07 01:15:39.795438",
+ "modified": "2025-12-01 17:06:49.628204",
  "modified_by": "Administrator",
  "module": "Hosts",
  "name": "HSBC Bank Host",
@@ -244,6 +306,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

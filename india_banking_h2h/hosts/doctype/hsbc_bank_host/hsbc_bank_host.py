@@ -706,9 +706,20 @@ class HSBCBankHost(BaseHost):
 		payment_log_doc.reload()
 		return payment_log_doc.get_summary_details()
 
-	def get_status_from_server(self):
+	def get_status_from_server(self, force_fetch=False):
+		"""Fetch status files from SFTP server and process them."""
 		if not self.reversefeed_folder:
+			if force_fetch:
+				frappe.throw("Reversefeed folder is not configured")
 			return
+
+		# First, check the status of existing logs
+		self.check_status()
+
+		# Skip fetching if auto_fetch is disabled and not forced
+		if not self.auto_fetch and not force_fetch:
+			return
+
 		file_dict = {}
 
 		transport = None
@@ -926,3 +937,8 @@ class HSBCBankHost(BaseHost):
 			frappe.db.set_value(
 				"Status Log", status_log_id, "decrypted_data", decrypted_data.decode()
 			)
+
+	@frappe.whitelist()
+	def force_fetch_status(self):
+		self.is_active()
+		return self.get_status_from_server(force_fetch=True)
