@@ -172,6 +172,29 @@ class HSBCBankHost(BaseHost):
 						"status_description": status_description,
 						"utr_number": data.get("Transaction Reference no"),
 					}
+					# Validate same bank to update UTR Number
+					try:
+						same_bank = "HSBC Bank" in cstr(
+							frappe.db.get_value(
+								"Payment Order Summary",
+								{"name": transaction_id},
+								"bank",
+							)
+						)
+						if same_bank:
+							formated_response[transaction_id]["utr_number"] = data.get(
+								"Bank Ref no"
+							)
+							formated_response[transaction_id]["payment_order"] = cstr(
+								frappe.db.get_value(
+									"Payment Order Summary",
+									{"name": transaction_id},
+									"parent",
+								)
+							)
+					except Exception:
+						# Ignore Same bank check failed
+						pass
 		else:
 			ns = {"ns": "urn:iso:std:iso:20022:tech:xsd:pain.002.001.03"}
 

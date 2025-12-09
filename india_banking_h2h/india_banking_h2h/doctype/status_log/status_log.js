@@ -32,7 +32,7 @@ function showStatusList(statuss) {
 		list_html += `
             <li class="list-group-item">
                 <button class="btn btn-link" onclick="showStatusDetails(${index})">
-                    <b>Status</b>(${txn.key}) - ₹${txn.amount}
+                    <b>Status[${txn.payment_order}]</b>(${txn.key}) - ₹${txn.amount}
                 </button>
             </li>`;
 	});
