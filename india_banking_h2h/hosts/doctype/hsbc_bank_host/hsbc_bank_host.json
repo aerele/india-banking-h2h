@@ -1,0 +1,314 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:account_number",
+ "creation": "2025-06-20 10:47:37.789088",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_egib",
+  "active",
+  "column_break_mwck",
+  "testing",
+  "section_break_jujv",
+  "account_number",
+  "pc_id",
+  "ifsc_code",
+  "file_authorisation",
+  "column_break_qwyl",
+  "sftp_private_key",
+  "pgp_key_details_section",
+  "pgp_public_key",
+  "client_finger_print",
+  "pgp_private_key",
+  "pgp_private_key_password",
+  "column_break_ejfc",
+  "hsbc_pgp_public_key",
+  "hsbc_finger_print",
+  "hsbc_details_section",
+  "hostname",
+  "username",
+  "payment_folder",
+  "column_break_enfp",
+  "port",
+  "password",
+  "reversefeed_folder",
+  "amended_from",
+  "section_break_hrre",
+  "enable_payroll_payment",
+  "enable_imps_payment",
+  "connection_tab",
+  "hsbc_section",
+  "auto_fetch",
+  "reversefeed_files",
+  "force_fetch_status",
+  "column_break_sxrt",
+  "status",
+  "last_connection_check",
+  "check_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_egib",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "fieldname": "column_break_mwck",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "testing",
+   "fieldtype": "Check",
+   "label": "Testing"
+  },
+  {
+   "fieldname": "section_break_jujv",
+   "fieldtype": "Section Break",
+   "label": "Client Details"
+  },
+  {
+   "fieldname": "account_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Account Number",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_qwyl",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "username",
+   "fieldtype": "Data",
+   "label": "Username"
+  },
+  {
+   "description": "Eg: example.in or 22.44.55.66",
+   "fieldname": "hostname",
+   "fieldtype": "Data",
+   "label": "Hostname"
+  },
+  {
+   "fieldname": "payment_folder",
+   "fieldtype": "Data",
+   "label": "Payment Folder"
+  },
+  {
+   "fieldname": "column_break_enfp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "password",
+   "fieldtype": "Password",
+   "label": "Password"
+  },
+  {
+   "default": "10022",
+   "description": "Eg: 10022",
+   "fieldname": "port",
+   "fieldtype": "Data",
+   "label": "Port"
+  },
+  {
+   "description": "Eg: /Inbox",
+   "fieldname": "reversefeed_folder",
+   "fieldtype": "Data",
+   "label": "Reversefeed Folder"
+  },
+  {
+   "fieldname": "pc_id",
+   "fieldtype": "Data",
+   "label": "PC ID",
+   "reqd": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "hsbc_details_section",
+   "fieldtype": "Section Break",
+   "label": "HSBC Details"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "HSBC Bank Host",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "sftp_private_key",
+   "fieldtype": "Attach",
+   "label": "Private Key (SFTP)"
+  },
+  {
+   "fieldname": "pgp_public_key",
+   "fieldtype": "Attach",
+   "label": "Public Key(PGP Public Key)"
+  },
+  {
+   "fieldname": "pgp_private_key",
+   "fieldtype": "Attach",
+   "label": "Sign in Key(PGP Private Key)"
+  },
+  {
+   "depends_on": "eval: !! doc.pgp_private_key",
+   "description": "Required if the PGP private key was generated with a password.",
+   "fieldname": "pgp_private_key_password",
+   "fieldtype": "Password",
+   "label": "Sign in key password"
+  },
+  {
+   "fieldname": "hsbc_pgp_public_key",
+   "fieldtype": "Attach",
+   "label": "Encryption Key(HSBC PGP Public Key)"
+  },
+  {
+   "fieldname": "pgp_key_details_section",
+   "fieldtype": "Section Break",
+   "label": "PGP Key Details"
+  },
+  {
+   "fieldname": "column_break_ejfc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: !!doc.hsbc_pgp_public_key",
+   "fieldname": "hsbc_finger_print",
+   "fieldtype": "Data",
+   "label": "Finger Print(HSBC PGP Public Key)",
+   "mandatory_depends_on": "eval: !!doc.hsbc_pgp_public_key"
+  },
+  {
+   "depends_on": "eval: !!doc.pgp_public_key",
+   "fieldname": "client_finger_print",
+   "fieldtype": "Data",
+   "label": "Finger Print(PGP Public Key)",
+   "mandatory_depends_on": "eval: !!doc.pgp_public_key"
+  },
+  {
+   "default": "HSBCINBB",
+   "description": "eg: HSBCINBB",
+   "fieldname": "ifsc_code",
+   "fieldtype": "Data",
+   "label": "IFSC Code"
+  },
+  {
+   "default": "ILEV",
+   "description": "AUTH - Pre Authorised File\n</br>\nFDET - File Level Authorisation Details\n</br>\nFSUM - File Level Authorisation Summary\n</br>\nILEV - Instruction Level Authorisation",
+   "fieldname": "file_authorisation",
+   "fieldtype": "Select",
+   "label": "Authorisation",
+   "options": "AUTH\nFDET\nFSUM\nILEV"
+  },
+  {
+   "default": "0",
+   "description": "Marks employee-type payments as salary when enabled",
+   "fieldname": "enable_payroll_payment",
+   "fieldtype": "Check",
+   "label": "Enable Payroll Payment"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_imps_payment",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Enable IMPS Payment"
+  },
+  {
+   "fieldname": "section_break_hrre",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "connection_tab",
+   "fieldtype": "Tab Break",
+   "label": "Connection"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "label": "Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "check_status",
+   "fieldtype": "Button",
+   "label": "Check Status",
+   "options": "check_status"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "hsbc_section",
+   "fieldtype": "Section Break",
+   "label": "HSBC",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "description": "When enabled, the system will automatically check and fetch status files from the mail server every 5 minutes. If disabled, you must fetch the files manually.",
+   "fieldname": "auto_fetch",
+   "fieldtype": "Check",
+   "label": "Auto Fetch Status Files"
+  },
+  {
+   "fieldname": "last_connection_check",
+   "fieldtype": "Datetime",
+   "label": "Last Connection Check",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reversefeed_files",
+   "fieldtype": "Long Text",
+   "label": "Reversefeed Files",
+   "read_only": 1
+  },
+  {
+   "fieldname": "force_fetch_status",
+   "fieldtype": "Button",
+   "label": "Force Fetch Status",
+   "options": "force_fetch_status"
+  },
+  {
+   "fieldname": "column_break_sxrt",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-12-01 17:06:49.628204",
+ "modified_by": "Administrator",
+ "module": "Hosts",
+ "name": "HSBC Bank Host",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

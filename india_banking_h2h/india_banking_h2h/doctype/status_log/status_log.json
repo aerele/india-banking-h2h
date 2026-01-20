@@ -7,6 +7,12 @@
  "engine": "InnoDB",
  "field_order": [
   "source_file_name",
+  "status_file",
+  "column_break_baxf",
+  "host",
+  "host_name",
+  "section_break_xber",
+  "decrypted_data",
   "response",
   "pretty_format_json",
   "error"
@@ -21,23 +27,55 @@
   {
    "fieldname": "response",
    "fieldtype": "Code",
-   "label": "Response"
+   "label": "Response",
+   "read_only": 1
   },
   {
    "fieldname": "error",
    "fieldtype": "Code",
-   "label": "Error"
+   "label": "Error",
+   "read_only": 1
   },
   {
    "fieldname": "pretty_format_json",
    "fieldtype": "Button",
    "label": "Pretty Format JSON"
+  },
+  {
+   "fieldname": "status_file",
+   "fieldtype": "Attach",
+   "label": "Status File(Encrypted)"
+  },
+  {
+   "fieldname": "column_break_baxf",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_xber",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "decrypted_data",
+   "fieldtype": "Code",
+   "label": "Decrypted Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "host",
+   "fieldtype": "Link",
+   "label": "Host",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "host_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Host Name",
+   "options": "host"
   }
  ],
- "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-03-28 17:34:28.431737",
+ "modified": "2025-08-02 18:09:24.133799",
  "modified_by": "Administrator",
  "module": "India Banking H2H",
  "name": "Status Log",
@@ -57,6 +95,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

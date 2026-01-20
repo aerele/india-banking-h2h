@@ -6,6 +6,7 @@ import frappe
 import paramiko
 from frappe.model.document import Document
 from frappe.utils import cint
+from frappe.utils.file_manager import get_file_path
 
 
 class BaseHost(Document):
@@ -68,29 +69,29 @@ class BaseHost(Document):
 		frappe.db.set_value(
 			"Payment Log",
 			log_id,
-			"payment_file",
-			request.get("file_url", ""),
-		)
-		frappe.db.set_value(
-			"Payment Log",
-			log_id,
-			"request",
-			json.dumps(request.get("request_data", "")),
+			{
+				"payment_file": request.get("file_url", ""),
+				"request": json.dumps(request.get("request_data", "")),
+			},
 		)
 		frappe.db.commit()
+		if self.encrypt_payment_file:
+			return self.get_encrypt_payment_file(log_id)
+
 		return frappe.db.get_value("Payment Log", log_id, "payment_file")
 
 	def process_payment(self, log_id):
-		"""
-		Process the payment and return the response.
-		Args:
-		        log_id (str): The ID of the payment log.
-		Returns:
-		        dict: A dictionary containing the formatted response of the payment processing.
-		"""
 		payment_file_url = frappe.db.get_value("Payment Log", log_id, "payment_file")
+
 		if not payment_file_url:
 			payment_file_url = self.generate_new_payment_file(log_id)
+
+		if payment_file_url and self.encrypt_payment_file:
+			payment_file_url = frappe.db.get_value(
+				"Payment Log", log_id, "encrypted_file"
+			)
+			if not payment_file_url:
+				payment_file_url = self.get_encrypt_payment_file(log_id)
 
 		if not payment_file_url:
 			frappe.throw("Payment Failed: Payment file not found")
@@ -178,3 +179,77 @@ class BaseHost(Document):
 			ssh.close()
 
 		return file_dict
+
+	def get_sftp_client(self):
+		"""Establishes SFTP connection using Paramiko and returns the transport and SFTP client."""
+		transport = None
+		sftp = None
+		try:
+			key = paramiko.RSAKey.from_private_key_file(
+				get_file_path(self.sftp_private_key)
+			)
+
+			# Create Transport and connect
+			transport = paramiko.Transport((self.hostname, cint(self.port) or 10022))
+			transport.connect(username=self.username, pkey=key)
+
+			# Create SFTP client
+			sftp = paramiko.SFTPClient.from_transport(transport)
+		except Exception as e:
+			frappe.log_error(
+				"HSBC Connection Failed", frappe.get_traceback(with_context=True)
+			)
+			frappe.throw(f"Connection to HSBC SFTP failed: {str(e)}")
+
+		frappe.msgprint("Connection to HSBC SFTP successful")
+
+		return transport, sftp
+
+	def close_sftp_client(self, client):
+		"""Closes the SFTP client and transport."""
+		transport, sftp = client
+		if sftp:
+			sftp.close()
+		if transport:
+			transport.close()
+
+	@frappe.whitelist()
+	def check_status(self):
+		self.is_active()
+		"""Check for files in the reversefeed folder on the SFTP server."""
+		client = self.get_sftp_client()
+
+		# return if connection failed
+		if not client:
+			return
+		transport, sftp = client
+
+		self.db_set("last_connection_check", frappe.utils.now(), update_modified=False)
+		if sftp:
+			# Change to the reversefeed directory
+			sftp.chdir(self.reversefeed_folder)
+
+			# List files in the directory
+			reversefeed_files = [
+				item.filename
+				for item in sftp.listdir_attr()
+				if (item.st_mode & 0o100000)
+			]
+			if reversefeed_files:
+				frappe.log_error(
+					"Files found in reversefeed folder",
+					f"Files: {', '.join(reversefeed_files)}",
+				)
+				self.db_set(
+					"reversefeed_files",
+					", ".join(reversefeed_files),
+					update_modified=False,
+				)
+			else:
+				frappe.msgprint("No files found in reversefeed folder.")
+
+		# Force commit to save changes
+		frappe.db.commit()
+
+		# Close the SFTP client
+		self.close_sftp_client(client)

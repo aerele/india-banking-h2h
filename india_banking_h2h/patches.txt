@@ -2,7 +2,7 @@
 # Patches added in this section will be executed before doctypes are migrated
 # Read docs to understand patches: https://frappeframework.com/docs/v14/user/en/database-migrations
 
-india_banking_h2h.patches.v1_0.create_host_defaults
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+india_banking_h2h.patches.v1_0.create_host_defaults #2

@@ -20,3 +20,17 @@ class StatusLog(Document):
 						"status",
 						json.dumps(data, indent=4),
 					)
+
+	@frappe.whitelist()
+	def decrypt_file(self):
+		if self.host and self.host_name:
+			host = frappe.get_doc(self.host, self.host_name)
+			if hasattr(host, "decrypt_file"):
+				getattr(host, "decrypt_file")(self.name)
+
+	@frappe.whitelist()
+	def format_response(self):
+		if self.host and self.host_name:
+			host = frappe.get_doc(self.host, self.host_name)
+			if hasattr(host, "format_response"):
+				getattr(host, "format_response")(self.name)

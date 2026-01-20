@@ -83,7 +83,7 @@ app_license = "mit"
 # ------------
 
 # before_install = "india_banking_h2h.install.before_install"
-# after_install = "india_banking_h2h.install.after_install"
+after_install = "india_banking_h2h.install.after_install"
 
 # Uninstallation
 # ------------

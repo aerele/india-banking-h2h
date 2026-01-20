@@ -8,11 +8,25 @@
  "field_order": [
   "section_break_egmw",
   "payment_log_id",
-  "status",
-  "column_break_iphq",
   "host",
   "host_name",
-  "payment_file",
+  "column_break_iphq",
+  "status",
+  "payment_files_section",
+  "payroll_payment_file",
+  "neft_payment_file",
+  "rtgs_payment_file",
+  "imps_payment_file",
+  "column_break_bsuh",
+  "payroll_encrypted_payment_file",
+  "neft_encrypted_payment_file",
+  "rtgs_encrypted_payment_file",
+  "imps_encrypted_payment_file",
+  "column_break_ztjd",
+  "uploaded_payroll",
+  "uploaded_neft",
+  "uploaded_rtgs",
+  "uploaded_imps",
   "section_break_lkyi",
   "payment_summary",
   "section_break_request",
@@ -34,11 +48,6 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
-  },
-  {
-   "fieldname": "payment_file",
-   "fieldtype": "Attach",
-   "label": "Payment File"
   },
   {
    "fieldname": "payment_log_id",
@@ -94,13 +103,91 @@
    "fieldname": "pretty_format_json",
    "fieldtype": "Button",
    "label": "Pretty Format JSON"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "payment_files_section",
+   "fieldtype": "Section Break",
+   "label": "Payment files"
+  },
+  {
+   "fieldname": "column_break_bsuh",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "neft_payment_file",
+   "fieldtype": "Attach",
+   "label": "Payment File(NEFT)"
+  },
+  {
+   "fieldname": "rtgs_payment_file",
+   "fieldtype": "Attach",
+   "label": "Payment File(RTGS)"
+  },
+  {
+   "fieldname": "neft_encrypted_payment_file",
+   "fieldtype": "Attach",
+   "label": "Encrypted Payment File(NEFT)"
+  },
+  {
+   "fieldname": "rtgs_encrypted_payment_file",
+   "fieldtype": "Attach",
+   "label": "Encrypted Payment File(RTGS)"
+  },
+  {
+   "fieldname": "column_break_ztjd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "uploaded_neft",
+   "fieldtype": "Check",
+   "label": "Uploaded (NEFT)"
+  },
+  {
+   "default": "0",
+   "fieldname": "uploaded_rtgs",
+   "fieldtype": "Check",
+   "label": "Uploaded (RTGS)"
+  },
+  {
+   "fieldname": "imps_payment_file",
+   "fieldtype": "Attach",
+   "label": "Payment File(IMPS)"
+  },
+  {
+   "fieldname": "imps_encrypted_payment_file",
+   "fieldtype": "Attach",
+   "label": "Encrypted Payment File(IMPS)"
+  },
+  {
+   "default": "0",
+   "fieldname": "uploaded_imps",
+   "fieldtype": "Check",
+   "label": "Uploaded (IMPS)"
+  },
+  {
+   "fieldname": "payroll_payment_file",
+   "fieldtype": "Attach",
+   "label": "Payment File(Payroll)"
+  },
+  {
+   "fieldname": "payroll_encrypted_payment_file",
+   "fieldtype": "Attach",
+   "label": "Encrypted Payment File(Payroll)"
+  },
+  {
+   "default": "0",
+   "fieldname": "uploaded_payroll",
+   "fieldtype": "Check",
+   "label": "Uploaded (Payroll)"
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-03-28 16:45:45.775483",
+ "modified": "2025-07-06 23:08:47.542692",
  "modified_by": "Administrator",
  "module": "India Banking H2H",
  "name": "Payment Log",
