@@ -11,6 +11,7 @@ from frappe.utils.file_manager import get_file_path
 
 class BaseHost(Document):
 	def __init__(self, *args, **kwargs):
+		self.encrypt_payment_file = False
 		super().__init__(*args, **kwargs)
 		self.validate_user_permission()
 
